@@ -10,20 +10,21 @@ This example deploys a full Talos Linux Kubernetes cluster on Proxmox VE, includ
 
 ## When to use this setup
 
-This setup is designed for **small to medium homelab clusters** (3-6 nodes) where simplicity and full Terraform-managed lifecycle matter more than zero-downtime upgrades.
+This setup is designed for **small to medium clusters** (up to ~30 nodes) where managing the full cluster lifecycle through Terraform is a priority. It trades upgrade speed for simplicity and auditability — every change is a Terraform plan you can review before applying.
 
 **Good fit:**
 
 - Homelab / dev / staging environments
 - Multi-node clusters (3+ nodes) with HA etcd
-- Teams comfortable with brief maintenance windows during upgrades
-- Environments where the entire cluster lifecycle is managed through Terraform
+- Teams that want a single tool (Terraform) to own the cluster lifecycle
+- Clusters up to ~30 nodes where Terraform's plan/apply cycle remains manageable
+- Environments where brief maintenance windows during upgrades are acceptable
 
 **Not ideal for:**
 
 - **Single-node clusters** — Talos upgrades recreate VMs, which means total downtime with no other node to reschedule workloads onto. etcd also cannot tolerate losing its only member.
-- **Production workloads requiring zero-downtime upgrades** — this setup upgrades nodes by recreating VMs (new disk, new image), not via in-place Talos upgrades. Workloads are drained and rescheduled, but the process is not instantaneous.
-- **Very large clusters** — Terraform's plan/apply cycle grows linearly with node count. For 20+ nodes, consider a GitOps-based approach with Cluster API or similar.
+- **Production workloads requiring zero-downtime upgrades** — this setup upgrades nodes by recreating VMs (new disk, fresh Talos install, re-join to cluster). Workloads get rescheduled, but the process takes minutes per node, not seconds.
+- **Large clusters (30+ nodes)** — Terraform's plan/apply cycle grows linearly with node count. At that scale, consider a GitOps-based approach with Cluster API or similar tooling that handles rolling upgrades natively.
 
 ## Prerequisites
 
@@ -61,6 +62,27 @@ export TALOSCONFIG=$(pwd)/talosconfig.yaml
 - **Cilium**: Modify `cilium-values.yaml` (encryption, monitoring, etc.)
 - **Storage**: Adjust `proxmox-csi-values.yaml` for your datastore layout
 - **Talos extensions**: Add/remove extensions in `talos_extensions`
+
+## What Terraform manages vs what still needs talosctl
+
+The goal of this setup is to keep the cluster **lifecycle** fully in Terraform — provisioning, configuration, upgrades, and teardown are all `terraform apply`. You should not need `talosctl` for any routine change.
+
+However, `talosctl` is still your **operations toolkit** for tasks that are inherently imperative or interactive:
+
+| Task | Tool |
+|------|------|
+| Provision cluster | `terraform apply` |
+| Change node config (versions, extensions, sizing) | `terraform apply` |
+| Upgrade Talos / Kubernetes | `terraform apply` (flag-flip, see below) |
+| Deploy / update Helm charts | `terraform apply` |
+| Destroy cluster | `terraform destroy` |
+| Back up etcd | `talosctl etcd snapshot` |
+| Verify node health during upgrades | `talosctl health` |
+| Read node logs / debug issues | `talosctl logs`, `talosctl dmesg` |
+| Interactive dashboard | `talosctl dashboard` |
+| Disaster recovery (etcd restore, node reset) | `talosctl` |
+
+In short: if it changes desired state, it goes through Terraform. If it reads state or performs an operational action, use `talosctl` or `kubectl`.
 
 ## How upgrades work
 
