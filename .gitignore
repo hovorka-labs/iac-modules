@@ -1,0 +1,27 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+
+# Secrets
+id_rsa
+id_rsa.pub
+.decrypted*
+
+# OS
+.DS_Store
+
+# Ansible
+*.retry
