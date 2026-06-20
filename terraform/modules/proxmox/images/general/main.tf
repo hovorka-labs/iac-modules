@@ -1,4 +1,4 @@
-resource "proxmox_virtual_environment_download_file" "this" {
+resource "proxmox_download_file" "this" {
   for_each = toset(var.proxmox_nodes)
 
   node_name           = each.key

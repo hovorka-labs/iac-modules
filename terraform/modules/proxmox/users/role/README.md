@@ -17,7 +17,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_virtual_environment_role.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_role) | resource |
+| [proxmox_role.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/role) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
