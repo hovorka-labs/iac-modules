@@ -4,7 +4,7 @@
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >=3.2.0 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | 3.2.0 |
 ## Providers
 
 | Name | Version |
@@ -17,7 +17,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [helm_release.runner_deployment](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
+| [helm_release.runner_deployment](https://registry.terraform.io/providers/hashicorp/helm/3.2.0/docs/resources/release) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |

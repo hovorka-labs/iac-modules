@@ -4,7 +4,7 @@
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | >=0.110.0 |
+| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | 0.110.0 |
 ## Providers
 
 | Name | Version |
@@ -18,7 +18,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_virtual_environment_vm.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
+| [proxmox_virtual_environment_vm.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_vm) | resource |
 | [terraform_data.vm_recreate_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 ## Inputs
 

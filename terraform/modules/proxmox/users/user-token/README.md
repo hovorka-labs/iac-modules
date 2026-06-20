@@ -4,7 +4,7 @@
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | >=0.110.0 |
+| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | 0.110.0 |
 ## Providers
 
 | Name | Version |
@@ -17,7 +17,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_virtual_environment_user_token.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_user_token) | resource |
+| [proxmox_virtual_environment_user_token.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_user_token) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |

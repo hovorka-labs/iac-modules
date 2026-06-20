@@ -4,8 +4,8 @@
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >=3.2.0 |
-| <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >=3.2.0 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | 3.2.0 |
+| <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | 3.2.0 |
 ## Providers
 
 | Name | Version |
@@ -19,8 +19,8 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [helm_release.cilium](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
-| [kubernetes_labels.kube_system_pod_security](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/labels) | resource |
+| [helm_release.cilium](https://registry.terraform.io/providers/hashicorp/helm/3.2.0/docs/resources/release) | resource |
+| [kubernetes_labels.kube_system_pod_security](https://registry.terraform.io/providers/hashicorp/kubernetes/3.2.0/docs/resources/labels) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
