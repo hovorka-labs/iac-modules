@@ -1,0 +1,36 @@
+# Worker specific configuration
+
+machine:
+  sysctls:
+    vm.max_map_count: "524288"
+
+  # Network configuration
+  network:
+%{ if use_dhcp ~}
+    interfaces:
+      - interface: eth0
+        dhcp: true
+%{ else ~}
+%{ if interface_name != "" ~}
+    interfaces:
+      - interface: ${interface_name}
+        addresses:
+          - ${ip}/${subnet_mask}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ else ~}
+%{ if mac_address != "" ~}
+    interfaces:
+      - addresses:
+          - ${ip}/${subnet_mask}
+        deviceSelector:
+          hardwareAddr: ${mac_address}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ endif ~}
+%{ endif ~}
+%{ endif ~}

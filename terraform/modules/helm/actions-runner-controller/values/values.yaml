@@ -1,0 +1,16 @@
+certManagerEnabled: false
+
+authSecret:
+  enabled: true
+  create: true
+  name: "controller-manager"
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+
+scope:
+  singleNamespace: false
+
+logFormat: text

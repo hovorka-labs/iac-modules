@@ -1,0 +1,14 @@
+rbac:
+  create: true
+  clusterWideAccess: true
+  rules:
+    - apiGroups: 
+        - '*'
+runners:
+    config: |
+        [[runners]]
+          executor = "kubernetes"
+          [runners.kubernetes]
+            image = "alpine"
+            # Required because of a bug no one fixed for years - https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/353
+            service_account = "gitlab-runner"

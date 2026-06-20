@@ -1,0 +1,33 @@
+# Common configuration for all Talos nodes
+
+cluster:
+  # Kubernetes component container images
+  apiServer:
+    image: registry.k8s.io/kube-apiserver:${k8s_version}
+  controllerManager:
+    image: registry.k8s.io/kube-controller-manager:${k8s_version}
+  proxy:
+    image: registry.k8s.io/kube-proxy:${k8s_version}
+%{ if disable_kube_proxy }
+    disabled: true
+%{ endif }
+  scheduler:
+    image: registry.k8s.io/kube-scheduler:${k8s_version}
+
+machine:
+  # Installation configuration
+  install:
+    image: ${installer_image_url}
+  kubelet:
+    image: ghcr.io/siderolabs/kubelet:${k8s_version}
+
+  # Node labels for topology, plus any extra per-node labels (e.g. dedicated worker pools)
+  nodeLabels:
+    topology.kubernetes.io/region: ${cluster_name}
+    topology.kubernetes.io/zone: ${node_name}
+%{ for key, value in node_labels ~}
+    ${key}: ${value}
+%{ endfor ~}
+
+  # Node role
+  type: ${machine_type}
