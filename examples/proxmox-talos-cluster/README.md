@@ -30,7 +30,7 @@ This setup is designed for **small to medium clusters** (up to ~30 nodes) where 
 
 - Proxmox VE cluster with 3+ nodes
 - API token with VM and storage permissions
-- Terraform >= 1.5 (or OpenTofu)
+- [OpenTofu](https://opentofu.org/) >= 1.5 (or Terraform)
 
 ## Usage
 
@@ -38,20 +38,20 @@ This setup is designed for **small to medium clusters** (up to ~30 nodes) where 
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your Proxmox credentials
 
-terraform init
-terraform plan
-terraform apply
+tofu init
+tofu plan
+tofu apply
 ```
 
 ## Accessing the cluster
 
 ```bash
 # Export kubeconfig
-terraform output -raw kubeconfig > kubeconfig.yaml
+tofu output -raw kubeconfig > kubeconfig.yaml
 export KUBECONFIG=$(pwd)/kubeconfig.yaml
 
 # Export talosconfig
-terraform output -raw talosconfig > talosconfig.yaml
+tofu output -raw talosconfig > talosconfig.yaml
 export TALOSCONFIG=$(pwd)/talosconfig.yaml
 ```
 
@@ -65,17 +65,17 @@ export TALOSCONFIG=$(pwd)/talosconfig.yaml
 
 ## What Terraform manages vs what still needs talosctl
 
-The goal of this setup is to keep the cluster **lifecycle** fully in Terraform — provisioning, configuration, upgrades, and teardown are all `terraform apply`. You should not need `talosctl` for any routine change.
+The goal of this setup is to keep the cluster **lifecycle** fully in Terraform — provisioning, configuration, upgrades, and teardown are all `tofu apply`. You should not need `talosctl` for any routine change.
 
 However, `talosctl` is still your **operations toolkit** for tasks that are inherently imperative or interactive:
 
 | Task | Tool |
 |------|------|
-| Provision cluster | `terraform apply` |
-| Change node config (versions, extensions, sizing) | `terraform apply` |
-| Upgrade Talos / Kubernetes | `terraform apply` (flag-flip, see below) |
-| Deploy / update Helm charts | `terraform apply` |
-| Destroy cluster | `terraform destroy` |
+| Provision cluster | `tofu apply` |
+| Change node config (versions, extensions, sizing) | `tofu apply` |
+| Upgrade Talos / Kubernetes | `tofu apply` (flag-flip, see below) |
+| Deploy / update Helm charts | `tofu apply` |
+| Destroy cluster | `tofu destroy` |
 | Back up etcd | `talosctl etcd snapshot` |
 | Verify node health during upgrades | `talosctl health` |
 | Read node logs / debug issues | `talosctl logs`, `talosctl dmesg` |
@@ -127,7 +127,7 @@ A Talos version upgrade rebuilds the VM from a new ISO image — this **recreate
    ```
 
    ```bash
-   terraform apply
+   tofu apply
    ```
 
 3. **Wait for the node to rejoin** and verify health before moving to the next:
@@ -168,6 +168,7 @@ The procedure is the same flag-flip approach:
 - **Don't skip Talos minor versions.** Talos supports upgrading one minor version at a time (e.g., v1.11 -> v1.12, not v1.11 -> v1.13).
 - **Back up etcd** before upgrading control plane nodes: `talosctl etcd snapshot etcd-backup.snapshot --nodes <cp-ip>`
 - **The process is intentionally manual and slow.** You flip one node at a time so you can verify health at each step. This is a feature, not a limitation — it gives you a clear rollback point (just set the flag back to `false`).
+- **Always finalize after an upgrade.** Once all nodes are upgraded, promote the upgraded version to current and reset all flags to `false`. If you forget and later bump `upgraded_talos_version` for a new upgrade, any node still set to `upgrade_talos = true` will jump to the new version immediately on the next apply — bypassing the controlled one-at-a-time rollout.
 
 ## Architecture
 
