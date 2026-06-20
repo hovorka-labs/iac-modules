@@ -17,6 +17,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
+| [proxmox_acl.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/acl) | resource |
 | [proxmox_virtual_environment_user.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_user) | resource |
 ## Inputs
 

@@ -17,7 +17,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_virtual_environment_user_token.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_user_token) | resource |
+| [proxmox_user_token.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/user_token) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
