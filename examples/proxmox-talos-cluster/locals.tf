@@ -3,10 +3,14 @@ locals {
   cluster_name         = "my-talos-cluster"
   proxmox_cluster_name = "my-proxmox-cluster"
 
-  # Versions
-  talos_version       = "v1.12.0"
-  k8s_version         = "v1.33.3"
-  gateway_api_version = "v1.3.0"
+  # Version configuration
+  # During upgrades, set the upgraded_* versions to the target version,
+  # then flip upgrade_talos / upgrade_k8s per node (see README.md).
+  talos_version          = "v1.12.0"
+  upgraded_talos_version = "v1.12.0"
+  k8s_version            = "v1.33.3"
+  upgraded_k8s_version   = "v1.33.3"
+  gateway_api_version    = "v1.3.0"
 
   # Proxmox nodes and storage
   proxmox_nodes         = ["pve-01", "pve-02", "pve-03"]
@@ -59,37 +63,51 @@ locals {
     }
   }
 
-  # Node definitions — adjust IPs and Proxmox node placement to match your environment
+  # Node definitions
+  # upgrade_talos: when true, the node uses upgraded_talos_version (VM gets recreated)
+  # upgrade_k8s:   when true, the node uses upgraded_k8s_version (in-place, no recreation)
   nodes = {
     "cp-01" = {
-      machine_type = "controlplane"
-      ip           = "10.0.0.101"
-      proxmox_node = "pve-01"
+      machine_type  = "controlplane"
+      ip            = "10.0.0.101"
+      proxmox_node  = "pve-01"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
     "cp-02" = {
-      machine_type = "controlplane"
-      ip           = "10.0.0.102"
-      proxmox_node = "pve-02"
+      machine_type  = "controlplane"
+      ip            = "10.0.0.102"
+      proxmox_node  = "pve-02"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
     "cp-03" = {
-      machine_type = "controlplane"
-      ip           = "10.0.0.103"
-      proxmox_node = "pve-03"
+      machine_type  = "controlplane"
+      ip            = "10.0.0.103"
+      proxmox_node  = "pve-03"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
     "worker-01" = {
-      machine_type = "worker"
-      ip           = "10.0.0.111"
-      proxmox_node = "pve-01"
+      machine_type  = "worker"
+      ip            = "10.0.0.111"
+      proxmox_node  = "pve-01"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
     "worker-02" = {
-      machine_type = "worker"
-      ip           = "10.0.0.112"
-      proxmox_node = "pve-02"
+      machine_type  = "worker"
+      ip            = "10.0.0.112"
+      proxmox_node  = "pve-02"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
     "worker-03" = {
-      machine_type = "worker"
-      ip           = "10.0.0.113"
-      proxmox_node = "pve-03"
+      machine_type  = "worker"
+      ip            = "10.0.0.113"
+      proxmox_node  = "pve-03"
+      upgrade_talos = false
+      upgrade_k8s   = false
     }
   }
 
@@ -119,13 +137,15 @@ locals {
         ]
 
         cdrom = {
-          file_id   = module.talos_image.image_nodes[config.proxmox_node]
+          file_id   = config.upgrade_talos ? module.upgraded_talos_image.image_nodes[config.proxmox_node] : module.talos_image.image_nodes[config.proxmox_node]
           interface = "ide1"
         }
 
-        boot_order      = ["scsi0", "ide1"]
-        recreation_hash = md5(jsonencode({ image = module.talos_image.image_nodes[config.proxmox_node] }))
-        tags            = ["provisioned-by-terraform", "talos"]
+        boot_order = ["scsi0", "ide1"]
+        recreation_hash = md5(jsonencode({
+          image = config.upgrade_talos ? module.upgraded_talos_image.image_nodes[config.proxmox_node] : module.talos_image.image_nodes[config.proxmox_node]
+        }))
+        tags = ["provisioned-by-terraform", "talos"]
       },
     )
   }
@@ -139,12 +159,12 @@ locals {
       mac_address         = module.vms.mac_addresses[name]
       gateway             = local.network.gateway
       subnet_mask         = local.network.subnet_mask
-      installer_image_url = module.talos_image.installer_image_url
-      k8s_version         = local.k8s_version
+      installer_image_url = config.upgrade_talos ? module.upgraded_talos_image.installer_image_url : module.talos_image.installer_image_url
+      k8s_version         = config.upgrade_k8s ? local.upgraded_k8s_version : local.k8s_version
       apply_mode          = "auto"
       recreation_hash = md5(jsonencode({
-        image       = module.talos_image.image_nodes[config.proxmox_node]
-        k8s_version = local.k8s_version
+        image       = config.upgrade_talos ? module.upgraded_talos_image.image_nodes[config.proxmox_node] : module.talos_image.image_nodes[config.proxmox_node]
+        k8s_version = config.upgrade_k8s ? local.upgraded_k8s_version : local.k8s_version
       }))
     }
   }

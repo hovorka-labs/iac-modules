@@ -37,7 +37,7 @@ module "k8s_csi_user_token" {
   privileges_separation = false
 }
 
-# Talos Image — downloads the Talos ISO with extensions to each Proxmox node
+# Talos Image (current version)
 module "talos_image" {
   source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=v0.6.0"
 
@@ -49,10 +49,22 @@ module "talos_image" {
   platform      = "nocloud"
 }
 
+# Talos Image (upgrade target) — kept alongside the current image during rolling upgrades
+module "upgraded_talos_image" {
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=v0.6.0"
+
+  proxmox_nodes     = local.proxmox_nodes
+  proxmox_datastore = local.proxmox_datastore_iso
+
+  talos_version = local.upgraded_talos_version
+  extensions    = local.talos_extensions
+  platform      = "nocloud"
+}
+
 # Proxmox VMs — creates the virtual machines that will become Talos nodes
 module "vms" {
   source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=v0.6.0"
-  depends_on = [module.talos_image]
+  depends_on = [module.talos_image, module.upgraded_talos_image]
 
   vms = local.proxmox_vms
 }
