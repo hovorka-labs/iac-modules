@@ -2,7 +2,7 @@ rbac:
   create: true
   clusterWideAccess: true
   rules:
-    - apiGroups: 
+    - apiGroups:
         - '*'
 runners:
     config: |
