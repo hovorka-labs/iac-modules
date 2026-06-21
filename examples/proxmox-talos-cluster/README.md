@@ -157,11 +157,13 @@ k8s_version   = "v1.34.0"
 
 ```bash
 tofu apply
+# For Talos upgrades, run a second apply to redeploy Helm charts:
+tofu apply
 ```
 
-For **Kubernetes-only upgrades**, this is seamless — all configs are reapplied in-place. The API server and kubelets restart briefly but the cluster stays available.
+For **Kubernetes-only upgrades**, this is seamless — all configs are reapplied in-place with a single apply. The API server and kubelets restart briefly but the cluster stays available.
 
-For **Talos upgrades**, all VMs are recreated simultaneously. The cluster bootstraps from scratch, and all Helm charts are redeployed. Expect 3-5 minutes of total downtime. etcd data and any in-cluster state (secrets, CRDs, etc.) are lost and recreated by Terraform.
+For **Talos upgrades**, all VMs are recreated simultaneously and the cluster bootstraps from scratch. This requires **two applies**: the first rebuilds the cluster, and the second redeploys the Helm charts (Terraform detects the missing releases automatically on the next plan). Expect 3-5 minutes of total downtime. etcd data and any in-cluster state (secrets, CRDs, etc.) are lost and recreated by Terraform.
 
 ### Important notes
 
