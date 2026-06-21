@@ -203,4 +203,8 @@ resource "talos_cluster_kubeconfig" "this" {
   timeouts = {
     read = "1m"
   }
+
+  lifecycle {
+    replace_triggered_by = [talos_machine_bootstrap.this]
+  }
 }
