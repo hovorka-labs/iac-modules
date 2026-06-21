@@ -18,7 +18,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_vm.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/vm) | resource |
+| [proxmox_virtual_environment_vm.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_vm) | resource |
 | [terraform_data.vm_recreate_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 ## Inputs
 
@@ -30,5 +30,5 @@ No modules.
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_mac_addresses"></a> [mac\_addresses](#output\_mac\_addresses) | MAC addresses for all VMs |
-| <a name="output_vms"></a> [vms](#output\_vms) | List of all proxmox\_vm resources |
+| <a name="output_vms"></a> [vms](#output\_vms) | List of all proxmox\_virtual\_environment\_vm resources |
 <!-- END_TF_DOCS -->
