@@ -1,6 +1,7 @@
 # Find the first control plane node IP for bootstrapping and endpoint configuration
 locals {
-  first_control_plane_node_ip = [for k, v in var.nodes : v.ip if v.machine_type == "controlplane"][0]
+  first_control_plane_node_ip  = [for k, v in var.nodes : v.ip if v.machine_type == "controlplane"][0]
+  first_control_plane_node_key = [for k, v in var.nodes : k if v.machine_type == "controlplane"][0]
 
   # Resolve the cluster endpoint: explicit override > VIP > first control plane IP
   kubernetes_endpoint = coalesce(
@@ -152,12 +153,21 @@ resource "talos_machine_configuration_apply" "this" {
   }
 }
 
+# Re-bootstrap when the first control plane node's VM is recreated
+resource "terraform_data" "bootstrap_trigger" {
+  input = terraform_data.vm_trigger[local.first_control_plane_node_key].output
+}
+
 # Bootstrap the Kubernetes cluster on the first control plane node
 resource "talos_machine_bootstrap" "this" {
   depends_on = [talos_machine_configuration_apply.this]
 
   node                 = local.first_control_plane_api_ip
   client_configuration = talos_machine_secrets.this.client_configuration
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.bootstrap_trigger]
+  }
 }
 
 # Verify cluster health after bootstrapping
