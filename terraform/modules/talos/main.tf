@@ -190,6 +190,48 @@ data "talos_cluster_health" "this" {
   }
 }
 
+# In-place Talos upgrade — runs talosctl upgrade when the installer image changes.
+# Skips the upgrade if the node is already on the target version (first deploy).
+resource "terraform_data" "talos_upgrade" {
+  for_each = var.nodes
+
+  depends_on = [
+    talos_machine_configuration_apply.this,
+    talos_machine_bootstrap.this,
+    data.talos_cluster_health.this
+  ]
+
+  triggers_replace = each.value.installer_image_url
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+
+      TALOSCONFIG=$(mktemp)
+      trap 'rm -f "$TALOSCONFIG"' EXIT
+      echo "$TALOS_CONFIG_CONTENT" > "$TALOSCONFIG"
+
+      TARGET=$(echo "$IMAGE" | rev | cut -d: -f1 | rev)
+      CURRENT=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+        | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "unknown")
+
+      if [ "$CURRENT" = "$TARGET" ]; then
+        echo "Node $NODE already on $TARGET, skipping upgrade"
+        exit 0
+      fi
+
+      echo "Upgrading node $NODE from $CURRENT to $TARGET"
+      talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait --talosconfig "$TALOSCONFIG"
+    EOT
+    environment = {
+      TALOS_CONFIG_CONTENT = nonsensitive(data.talos_client_configuration.this.talos_config)
+      NODE                 = local.resolved_talos_api_ips[each.key]
+      IMAGE                = each.value.installer_image_url
+    }
+  }
+}
+
 # Generate kubeconfig for accessing the Kubernetes cluster
 resource "talos_cluster_kubeconfig" "this" {
   depends_on = [

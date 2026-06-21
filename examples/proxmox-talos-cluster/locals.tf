@@ -140,9 +140,8 @@ locals {
           interface = "ide1"
         }
 
-        boot_order      = ["scsi0", "ide1"]
-        recreation_hash = config.talos_version
-        tags            = ["provisioned-by-terraform", "talos"]
+        boot_order = ["scsi0", "ide1"]
+        tags       = ["provisioned-by-terraform", "talos"]
       },
     )
   }

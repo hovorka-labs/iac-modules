@@ -23,6 +23,7 @@ No modules.
 | [talos_machine_configuration_apply.this](https://registry.terraform.io/providers/siderolabs/talos/0.11.0/docs/resources/machine_configuration_apply) | resource |
 | [talos_machine_secrets.this](https://registry.terraform.io/providers/siderolabs/talos/0.11.0/docs/resources/machine_secrets) | resource |
 | [terraform_data.bootstrap_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.talos_upgrade](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.vm_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [talos_client_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/0.11.0/docs/data-sources/client_configuration) | data source |
 | [talos_cluster_health.this](https://registry.terraform.io/providers/siderolabs/talos/0.11.0/docs/data-sources/cluster_health) | data source |
@@ -37,7 +38,6 @@ No modules.
 
 | Name | Description |
 | ---- | ----------- |
-| <a name="output_cluster_identity"></a> [cluster\_identity](#output\_cluster\_identity) | Opaque value that changes when the cluster is rebuilt |
 | <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubernetes configuration for cluster access |
 | <a name="output_machine_configs"></a> [machine\_configs](#output\_machine\_configs) | Generated machine configurations for all nodes |
 | <a name="output_talosconfig"></a> [talosconfig](#output\_talosconfig) | Talos client configuration for cluster management |

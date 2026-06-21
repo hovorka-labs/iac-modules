@@ -22,7 +22,7 @@ This setup is designed for **small to medium clusters** (up to ~30 nodes) where 
 
 **Not ideal for:**
 
-- **Single-node clusters** — Talos upgrades recreate VMs, which means total downtime with no other node to reschedule workloads onto. etcd also cannot tolerate losing its only member.
+- **Single-node clusters** — the node reboots during Talos upgrades, which means brief downtime with no other node to reschedule workloads onto. etcd also cannot tolerate losing its only member.
 - **Large clusters (30+ nodes)** — Terraform's plan/apply cycle grows linearly with node count. At that scale, consider a GitOps-based approach with Cluster API or similar tooling that handles rolling upgrades natively.
 
 ## Prerequisites
@@ -85,12 +85,10 @@ In short: if it changes desired state, it goes through Terraform. If it reads st
 
 ## How upgrades work
 
-Each node declares its own `talos_version` and `k8s_version` directly. To upgrade, change the version on one node at a time and apply.
+Each node declares its own `talos_version` and `k8s_version` directly. Both Talos and Kubernetes upgrades are **in-place** — no VMs are recreated, no data is lost.
 
-The two upgrade types behave differently:
-
-- **Kubernetes upgrades** are applied in-place via the Talos machine config — Talos updates the kubelet and control plane components without touching the VM. Fast and non-disruptive.
-- **Talos upgrades** recreate the VM with a new ISO image — the node gets a fresh disk, installs the new Talos version, and re-joins the cluster. This is necessary because the Talos Terraform provider does not expose an upgrade API; the only way to change the OS version through Terraform is to replace the VM.
+- **Kubernetes upgrades** are applied via the Talos machine config — Talos updates the kubelet and control plane components in place.
+- **Talos upgrades** are applied via `talosctl upgrade` (run automatically by the Talos module). Talos downloads the new image, installs it to the inactive partition, and reboots. etcd data and node identity are preserved.
 
 ```hcl
 # In locals.tf — default versions (nodes inherit these unless they override)
@@ -105,9 +103,7 @@ k8s_version   = "v1.33.3"
 }
 ```
 
-### Rolling upgrade (one node at a time)
-
-The safest approach. Upgrade one node at a time, verifying health between each step. The cluster stays available throughout.
+### Upgrade procedure
 
 1. **Back up etcd** before starting:
 
@@ -119,8 +115,8 @@ The safest approach. Upgrade one node at a time, verifying health between each s
 
    ```hcl
    "cp-01" = {
-     talos_version = "v1.13.0"    # upgraded (VM will be recreated)
-     k8s_version   = "v1.34.0"   # upgraded (in-place, no VM recreation)
+     talos_version = "v1.13.0"
+     k8s_version   = "v1.34.0"
    }
    ```
 
@@ -128,7 +124,7 @@ The safest approach. Upgrade one node at a time, verifying health between each s
    tofu apply
    ```
 
-3. **Wait for the node to rejoin** and verify health before moving to the next:
+3. **Verify health** before moving to the next:
 
    ```bash
    kubectl get nodes
@@ -148,29 +144,16 @@ The safest approach. Upgrade one node at a time, verifying health between each s
 
 ### All-at-once upgrade
 
-If downtime is acceptable, you can upgrade all nodes at once. Change the default versions and apply.
-
-For **Kubernetes-only upgrades**, a single apply is enough — all configs are reapplied in-place:
+If brief downtime is acceptable, you can upgrade all nodes at once by changing the default versions and applying. Terraform runs `talosctl upgrade` on all nodes in parallel — each node reboots independently and comes back on the new version. etcd data is preserved and the cluster recovers automatically once nodes are back.
 
 ```bash
 tofu apply
 ```
 
-For **Talos upgrades** (with or without a K8s upgrade), all VMs are recreated and the cluster bootstraps from scratch. This needs **two applies**:
-
-```bash
-tofu apply   # Rebuilds VMs, bootstraps cluster
-tofu apply   # Redeploys Helm charts
-```
-
-The second apply is needed because Terraform plans the Helm releases as "no changes" before the VMs are destroyed — at plan time the old cluster still has them. After the first apply rebuilds the cluster, the releases are gone. The second apply detects this and recreates them automatically.
-
-Expect 3-5 minutes of total downtime. etcd data and any in-cluster state (secrets, CRDs, etc.) are lost and recreated by Terraform.
-
 ### Important notes
 
-- **Talos upgrades recreate VMs.** The node gets a fresh disk, installs the new Talos version, and re-joins the cluster. Persistent data on the node's local disk is lost (use PVCs with the CSI driver for persistent storage).
-- **Kubernetes upgrades do not recreate VMs.** They are applied in-place via the Talos machine config, which is faster and less disruptive.
+- **Upgrades are in-place.** No VMs are recreated. Talos uses A/B partitions — the new version is written to the inactive partition and the node reboots. etcd data, node identity, and persistent storage are all preserved.
+- **`talosctl` must be installed** on the machine running Terraform. The Talos module runs `talosctl upgrade` via a local provisioner.
 - **Don't skip Talos minor versions.** Talos supports upgrading one minor version at a time (e.g., v1.12 -> v1.13, not v1.12 -> v1.14).
 - **Back up etcd** before upgrading control plane nodes: `talosctl etcd snapshot etcd-backup.snapshot --nodes <cp-ip>`
 - **Rolling upgrades maintain availability.** Upgrade control plane nodes first, one at a time — etcd requires a majority quorum, so with 3 control plane nodes you can only lose 1 at a time. Rollback is straightforward — set the version back to the previous value and apply.
