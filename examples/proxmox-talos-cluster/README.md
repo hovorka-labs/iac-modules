@@ -22,8 +22,7 @@ This setup is designed for **small to medium clusters** (up to ~30 nodes) where 
 
 **Not ideal for:**
 
-- **Single-node clusters** — Talos upgrades recreate VMs, which means total downtime with no other node to reschedule workloads onto. etcd also cannot tolerate losing its only member.
-- **Production workloads requiring zero-downtime upgrades** — this setup upgrades nodes by recreating VMs (new disk, fresh Talos install, re-join to cluster). Workloads get rescheduled, but the process takes minutes per node, not seconds.
+- **Single-node clusters** — even with in-place upgrades, the node reboots during the upgrade. With no other node to reschedule workloads onto, this means downtime. etcd also cannot tolerate losing its only member.
 - **Large clusters (30+ nodes)** — Terraform's plan/apply cycle grows linearly with node count. At that scale, consider a GitOps-based approach with Cluster API or similar tooling that handles rolling upgrades natively.
 
 ## Prerequisites
@@ -73,7 +72,7 @@ However, `talosctl` is still your **operations toolkit** for tasks that are inhe
 |------|------|
 | Provision cluster | `tofu apply` |
 | Change node config (versions, extensions, sizing) | `tofu apply` |
-| Upgrade Talos / Kubernetes | `tofu apply` (flag-flip, see below) |
+| Upgrade Talos / Kubernetes | `tofu apply` (per-node version change, see below) |
 | Deploy / update Helm charts | `tofu apply` |
 | Destroy cluster | `tofu destroy` |
 | Back up etcd | `talosctl etcd snapshot` |
@@ -86,43 +85,37 @@ In short: if it changes desired state, it goes through Terraform. If it reads st
 
 ## How upgrades work
 
-This setup uses a **dual-image, per-node flag** strategy for rolling upgrades. Two separate version tracks are maintained side by side:
+Each node declares its own `talos_version` and `k8s_version` directly. To upgrade, change the version on one node at a time and apply. Both Talos and Kubernetes upgrades are **in-place** — Talos handles the upgrade through its machine config, no VM recreation required.
 
 ```hcl
-# In locals.tf
-talos_version          = "v1.11.0"    # current version
-upgraded_talos_version = "v1.12.0"    # version to upgrade to
+# In locals.tf — default versions (nodes inherit these unless they override)
+talos_version = "v1.12.0"
+k8s_version   = "v1.33.3"
 
-k8s_version            = "v1.32.0"    # current version
-upgraded_k8s_version   = "v1.33.0"    # version to upgrade to
-```
-
-Each node has two flags that control which version it uses:
-
-```hcl
+# Each node specifies its version explicitly
 "cp-01" = {
   # ...
-  upgrade_talos = false   # true = use upgraded_talos_version
-  upgrade_k8s   = false   # true = use upgraded_k8s_version
+  talos_version = local.talos_version    # or "v1.13.0" during upgrade
+  k8s_version   = local.k8s_version     # or "v1.34.0" during upgrade
 }
 ```
 
-### Upgrade procedure (Talos version)
+### Upgrade procedure (Talos or Kubernetes)
 
-A Talos version upgrade rebuilds the VM from a new ISO image — this **recreates the VM** (new disk, fresh Talos install, re-join to cluster). The `recreation_hash` changes when the image changes, triggering a Terraform replace.
+The procedure is the same for both Talos and Kubernetes version upgrades. Changing the version in the machine config triggers Talos to perform the upgrade in-place — the node reboots with the new version without VM recreation.
 
-1. **Set the target version:**
+1. **Back up etcd** before starting:
 
-   ```hcl
-   upgraded_talos_version = "v1.12.0"
+   ```bash
+   talosctl etcd snapshot etcd-backup.snapshot --nodes <cp-ip>
    ```
 
-2. **Upgrade one node at a time** — flip `upgrade_talos = true` for a single node, then apply:
+2. **Upgrade one node at a time** — change the version for a single node, then apply:
 
    ```hcl
    "cp-01" = {
-     upgrade_talos = true    # this node gets the new image
-     upgrade_k8s   = false
+     talos_version = "v1.13.0"    # upgraded
+     k8s_version   = local.k8s_version
    }
    ```
 
@@ -139,36 +132,21 @@ A Talos version upgrade rebuilds the VM from a new ISO image — this **recreate
 
 4. **Repeat for each node** — control plane nodes first (one at a time to maintain etcd quorum), then workers.
 
-5. **Finalize** — once all nodes are upgraded, promote the upgraded version to current and reset the flags:
+5. **Update the default** — once all nodes are on the new version, bump the default:
 
    ```hcl
-   talos_version          = "v1.12.0"
-   upgraded_talos_version = "v1.12.0"
-
-   # All nodes back to:
-   upgrade_talos = false
+   talos_version = "v1.13.0"
    ```
 
-### Upgrade procedure (Kubernetes version)
-
-Kubernetes upgrades are **non-destructive** — they update the Talos machine config with the new `k8s_version`, and Talos handles the kubelet/control-plane component upgrade in place. No VM recreation occurs.
-
-The procedure is the same flag-flip approach:
-
-1. Set `upgraded_k8s_version = "v1.33.0"`
-2. Flip `upgrade_k8s = true` one node at a time
-3. Apply and verify
-4. Finalize by promoting the version
+   This is cosmetic — all nodes already reference the new version. But it keeps the defaults current for new nodes.
 
 ### Important notes
 
 - **Always upgrade control plane nodes first**, one at a time. etcd requires a majority quorum — with 3 control plane nodes, you can only lose 1 at a time.
-- **Talos upgrades recreate VMs.** The node gets a fresh disk and re-joins the cluster. Persistent data on the node's local disk is lost (use PVCs with the CSI driver for persistent storage).
-- **Kubernetes upgrades do not recreate VMs.** They are applied via Talos machine config reapply, which is much faster and less disruptive.
-- **Don't skip Talos minor versions.** Talos supports upgrading one minor version at a time (e.g., v1.11 -> v1.12, not v1.11 -> v1.13).
+- **Upgrades are in-place.** Talos downloads the new image, installs to the inactive partition, and reboots. etcd data and node identity are preserved. No VM recreation occurs.
+- **Don't skip Talos minor versions.** Talos supports upgrading one minor version at a time (e.g., v1.12 -> v1.13, not v1.12 -> v1.14).
 - **Back up etcd** before upgrading control plane nodes: `talosctl etcd snapshot etcd-backup.snapshot --nodes <cp-ip>`
-- **The process is intentionally manual and slow.** You flip one node at a time so you can verify health at each step. This is a feature, not a limitation — it gives you a clear rollback point (just set the flag back to `false`).
-- **Always finalize after an upgrade.** Once all nodes are upgraded, promote the upgraded version to current and reset all flags to `false`. If you forget and later bump `upgraded_talos_version` for a new upgrade, any node still set to `upgrade_talos = true` will jump to the new version immediately on the next apply — bypassing the controlled one-at-a-time rollout.
+- **The process is intentionally manual and slow.** You change one node at a time so you can verify health at each step. Rollback is straightforward — set the version back to the previous value and apply.
 
 ## Architecture
 

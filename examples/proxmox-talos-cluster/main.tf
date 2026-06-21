@@ -37,26 +37,15 @@ module "k8s_csi_user_token" {
   privileges_separation = false
 }
 
-# Talos Image (current version)
-module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=v0.6.0"
+# Talos Images — one per unique version across all nodes
+module "talos_images" {
+  source   = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=v0.6.0"
+  for_each = local.unique_talos_versions
 
   proxmox_nodes     = local.proxmox_nodes
   proxmox_datastore = local.proxmox_datastore_iso
 
-  talos_version = local.talos_version
-  extensions    = local.talos_extensions
-  platform      = "nocloud"
-}
-
-# Talos Image (upgrade target) — kept alongside the current image during rolling upgrades
-module "upgraded_talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=v0.6.0"
-
-  proxmox_nodes     = local.proxmox_nodes
-  proxmox_datastore = local.proxmox_datastore_iso
-
-  talos_version = local.upgraded_talos_version
+  talos_version = each.key
   extensions    = local.talos_extensions
   platform      = "nocloud"
 }
@@ -64,7 +53,7 @@ module "upgraded_talos_image" {
 # Proxmox VMs — creates the virtual machines that will become Talos nodes
 module "vms" {
   source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=v0.6.0"
-  depends_on = [module.talos_image, module.upgraded_talos_image]
+  depends_on = [module.talos_images]
 
   vms = local.proxmox_vms
 }
