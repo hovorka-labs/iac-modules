@@ -12,6 +12,13 @@ output "kubeconfig" {
   sensitive   = true
 }
 
+# Changes when the cluster is rebuilt (bootstrap replaced) — use as replace_triggers
+# for Helm modules to ensure they redeploy after an all-at-once Talos upgrade
+output "cluster_identity" {
+  description = "Opaque value that changes when the cluster is rebuilt"
+  value       = talos_machine_bootstrap.this.id
+}
+
 # Machine configurations for all nodes
 output "machine_configs" {
   description = "Generated machine configurations for all nodes"

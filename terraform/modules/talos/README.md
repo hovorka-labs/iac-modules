@@ -37,6 +37,7 @@ No modules.
 
 | Name | Description |
 | ---- | ----------- |
+| <a name="output_cluster_identity"></a> [cluster\_identity](#output\_cluster\_identity) | Opaque value that changes when the cluster is rebuilt |
 | <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubernetes configuration for cluster access |
 | <a name="output_machine_configs"></a> [machine\_configs](#output\_machine\_configs) | Generated machine configurations for all nodes |
 | <a name="output_talosconfig"></a> [talosconfig](#output\_talosconfig) | Talos client configuration for cluster management |
