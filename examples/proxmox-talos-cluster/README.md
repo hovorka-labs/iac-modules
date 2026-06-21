@@ -148,22 +148,24 @@ The safest approach. Upgrade one node at a time, verifying health between each s
 
 ### All-at-once upgrade
 
-If downtime is acceptable, you can upgrade all nodes in a single apply. Change the default versions and apply — all nodes are upgraded simultaneously.
+If downtime is acceptable, you can upgrade all nodes at once. Change the default versions and apply.
 
-```hcl
-talos_version = "v1.13.0"
-k8s_version   = "v1.34.0"
-```
+For **Kubernetes-only upgrades**, a single apply is enough — all configs are reapplied in-place:
 
 ```bash
 tofu apply
-# For Talos upgrades, run a second apply to redeploy Helm charts:
-tofu apply
 ```
 
-For **Kubernetes-only upgrades**, this is seamless — all configs are reapplied in-place with a single apply. The API server and kubelets restart briefly but the cluster stays available.
+For **Talos upgrades** (with or without a K8s upgrade), all VMs are recreated and the cluster bootstraps from scratch. This needs **two applies**:
 
-For **Talos upgrades**, all VMs are recreated simultaneously and the cluster bootstraps from scratch. This requires **two applies**: the first rebuilds the cluster, and the second redeploys the Helm charts (Terraform detects the missing releases automatically on the next plan). Expect 3-5 minutes of total downtime. etcd data and any in-cluster state (secrets, CRDs, etc.) are lost and recreated by Terraform.
+```bash
+tofu apply   # Rebuilds VMs, bootstraps cluster
+tofu apply   # Redeploys Helm charts
+```
+
+The second apply is needed because Terraform plans the Helm releases as "no changes" before the VMs are destroyed — at plan time the old cluster still has them. After the first apply rebuilds the cluster, the releases are gone. The second apply detects this and recreates them automatically.
+
+Expect 3-5 minutes of total downtime. etcd data and any in-cluster state (secrets, CRDs, etc.) are lost and recreated by Terraform.
 
 ### Important notes
 
