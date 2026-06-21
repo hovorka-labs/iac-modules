@@ -20,3 +20,9 @@ variable "runner_labels" {
   type        = list(string)
   default     = ["self-hosted", "linux"]
 }
+
+variable "deploy_namespaces" {
+  description = "Namespaces the runner is allowed to deploy to (creates namespace-scoped RBAC)"
+  type        = list(string)
+  default     = []
+}

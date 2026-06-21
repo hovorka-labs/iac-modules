@@ -23,6 +23,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_github_org"></a> [github\_org](#input\_github\_org) | GitHub organization name for the runner | `string` | n/a | yes |
+| <a name="input_deploy_namespaces"></a> [deploy\_namespaces](#input\_deploy\_namespaces) | Namespaces the runner is allowed to deploy to (creates namespace-scoped RBAC) | `list(string)` | `[]` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | Namespace where the runner deployment will be created | `string` | `"github-runners"` | no |
 | <a name="input_runner_labels"></a> [runner\_labels](#input\_runner\_labels) | Labels for the runner | `list(string)` | <pre>[<br/>  "self-hosted",<br/>  "linux"<br/>]</pre> | no |
 | <a name="input_runner_replicas"></a> [runner\_replicas](#input\_runner\_replicas) | Number of runner replicas | `number` | `1` | no |
