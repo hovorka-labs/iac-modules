@@ -27,6 +27,7 @@ No modules.
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_chart_version"></a> [chart\_version](#input\_chart\_version) | Cilium version to use for the cluster | `string` | n/a | yes |
 | <a name="input_cilium_values_path"></a> [cilium\_values\_path](#input\_cilium\_values\_path) | List of Cilium values paths | `list(string)` | `[]` | no |
+| <a name="input_timeout"></a> [timeout](#input\_timeout) | Helm install/upgrade timeout in seconds | `number` | `600` | no |
 ## Outputs
 
 No outputs.

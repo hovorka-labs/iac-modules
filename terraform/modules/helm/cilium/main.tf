@@ -15,6 +15,7 @@ resource "helm_release" "cilium" {
   repository = "https://helm.cilium.io/"
   chart      = "cilium"
   atomic     = true
+  timeout    = var.timeout
   version    = var.chart_version
 
   values = [
