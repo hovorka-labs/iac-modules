@@ -12,6 +12,7 @@
 | ---- | ------- |
 | <a name="provider_helm"></a> [helm](#provider\_helm) | 3.2.0 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 3.2.0 |
+| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 ## Modules
 
 No modules.
@@ -21,6 +22,7 @@ No modules.
 | ---- | ---- |
 | [helm_release.proxmox_csi_plugin](https://registry.terraform.io/providers/hashicorp/helm/3.2.0/docs/resources/release) | resource |
 | [kubernetes_labels.csi_proxmox_pod_security](https://registry.terraform.io/providers/hashicorp/kubernetes/3.2.0/docs/resources/labels) | resource |
+| [terraform_data.replace_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -31,6 +33,7 @@ No modules.
 | <a name="input_proxmox_token_secret"></a> [proxmox\_token\_secret](#input\_proxmox\_token\_secret) | Proxmox API token secret | `string` | n/a | yes |
 | <a name="input_proxmox_url"></a> [proxmox\_url](#input\_proxmox\_url) | Proxmox API URL | `string` | n/a | yes |
 | <a name="input_proxmox_insecure"></a> [proxmox\_insecure](#input\_proxmox\_insecure) | Skip TLS verification for Proxmox API | `bool` | `false` | no |
+| <a name="input_replace_triggers"></a> [replace\_triggers](#input\_replace\_triggers) | Values that, when changed, trigger replacement of the Helm release (e.g. cluster kubeconfig to redeploy on cluster rebuild) | `any` | `null` | no |
 | <a name="input_values_path"></a> [values\_path](#input\_values\_path) | List of values file paths | `list(string)` | `[]` | no |
 ## Outputs
 

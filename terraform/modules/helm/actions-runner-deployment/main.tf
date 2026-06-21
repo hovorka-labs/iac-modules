@@ -1,3 +1,7 @@
+resource "terraform_data" "replace_trigger" {
+  triggers_replace = var.replace_triggers
+}
+
 resource "helm_release" "runner_deployment" {
   name             = "github-runner"
   namespace        = var.namespace
@@ -12,4 +16,8 @@ resource "helm_release" "runner_deployment" {
     dockerEnabled    = false
     deployNamespaces = var.deploy_namespaces
   })]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.replace_trigger]
+  }
 }

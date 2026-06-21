@@ -36,3 +36,9 @@ variable "proxmox_region" {
   description = "Proxmox region (cluster name)"
   type        = string
 }
+
+variable "replace_triggers" {
+  description = "Values that, when changed, trigger replacement of the Helm release (e.g. cluster kubeconfig to redeploy on cluster rebuild)"
+  type        = any
+  default     = null
+}

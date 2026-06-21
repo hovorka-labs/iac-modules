@@ -1,3 +1,7 @@
+resource "terraform_data" "replace_trigger" {
+  triggers_replace = var.replace_triggers
+}
+
 locals {
   values_files = (
     length(var.values_path) > 0
@@ -30,4 +34,8 @@ resource "helm_release" "actions_runner_controller" {
       value = var.github_app_private_key
     }
   ]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.replace_trigger]
+  }
 }

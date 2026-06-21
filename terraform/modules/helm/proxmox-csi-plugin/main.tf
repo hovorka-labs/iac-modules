@@ -1,3 +1,7 @@
+resource "terraform_data" "replace_trigger" {
+  triggers_replace = var.replace_triggers
+}
+
 resource "kubernetes_labels" "csi_proxmox_pod_security" {
   api_version = "v1"
   kind        = "Namespace"
@@ -33,4 +37,8 @@ resource "helm_release" "proxmox_csi_plugin" {
       }
     })]
   )
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.replace_trigger]
+  }
 }

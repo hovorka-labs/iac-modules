@@ -1,3 +1,7 @@
+resource "terraform_data" "replace_trigger" {
+  triggers_replace = var.replace_triggers
+}
+
 resource "kubernetes_labels" "kube_system_pod_security" {
   api_version = "v1"
   kind        = "Namespace"
@@ -21,4 +25,8 @@ resource "helm_release" "cilium" {
   values = [
     for v in var.cilium_values_path : file(v)
   ]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.replace_trigger]
+  }
 }
