@@ -14,9 +14,3 @@ variable "timeout" {
   type        = number
   default     = 600
 }
-
-variable "replace_triggers" {
-  description = "Values that, when changed, trigger replacement of the Helm release (e.g. cluster kubeconfig to redeploy on cluster rebuild)"
-  type        = any
-  default     = null
-}

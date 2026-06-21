@@ -30,6 +30,7 @@ This setup is designed for **small to medium clusters** (up to ~30 nodes) where 
 - Proxmox VE cluster with 3+ nodes
 - API token with VM and storage permissions
 - [OpenTofu](https://opentofu.org/) >= 1.5 (or Terraform)
+- [talosctl](https://www.talos.dev/latest/talos-guides/install/talosctl/) — used by the Talos module for in-place upgrades
 
 ## Usage
 

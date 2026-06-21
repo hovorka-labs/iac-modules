@@ -26,9 +26,3 @@ variable "values_path" {
   type        = list(string)
   default     = []
 }
-
-variable "replace_triggers" {
-  description = "Values that, when changed, trigger replacement of the Helm release (e.g. cluster kubeconfig to redeploy on cluster rebuild)"
-  type        = any
-  default     = null
-}
