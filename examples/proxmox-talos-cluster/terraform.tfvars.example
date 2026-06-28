@@ -1,3 +1,0 @@
-proxmox_endpoint  = "https://pve.example.com:8006"
-proxmox_api_token = "user@pve!token=00000000-0000-0000-0000-000000000000"
-proxmox_insecure  = false
