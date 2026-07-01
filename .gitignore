@@ -25,3 +25,5 @@ id_rsa.pub
 
 # Ansible
 *.retry
+
+local-test/
