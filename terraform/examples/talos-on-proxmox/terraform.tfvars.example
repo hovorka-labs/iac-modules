@@ -8,3 +8,19 @@ proxmox_datastore = "local"
 # Omit proxmox_nodes to download the image to every node in the cluster,
 # or pin to specific nodes:
 # proxmox_nodes = ["pve1", "pve2", "pve3"]
+
+network_gateway     = "192.168.1.1"
+network_dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+nodes = {
+  talos-cp-1 = {
+    role         = "controlplane"
+    proxmox_node = "pve1"
+    ip           = "192.168.1.10/24"
+  }
+  talos-worker-1 = {
+    role         = "worker"
+    proxmox_node = "pve1"
+    ip           = "192.168.1.20/24"
+  }
+}

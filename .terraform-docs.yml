@@ -22,4 +22,4 @@ settings:
   escape: true
   indent: 2
   required: true
-  type: true
+  type: false

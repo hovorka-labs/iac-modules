@@ -32,3 +32,23 @@ variable "proxmox_datastore" {
   type        = string
   default     = "local"
 }
+
+variable "nodes" {
+  description = "Talos nodes to provision as Proxmox VMs, keyed by node name"
+  type = map(object({
+    role         = string # "controlplane" or "worker"
+    proxmox_node = string
+    ip           = string # CIDR, e.g. "192.168.1.10/24"
+  }))
+}
+
+variable "network_gateway" {
+  description = "Gateway address handed to each node via cloud-init"
+  type        = string
+}
+
+variable "network_dns_servers" {
+  description = "DNS servers handed to each node via cloud-init"
+  type        = list(string)
+  default     = ["1.1.1.1"]
+}
