@@ -1,0 +1,30 @@
+# Configuration shared by every node in the cluster
+
+cluster:
+  apiServer:
+    image: registry.k8s.io/kube-apiserver:${k8s_version}
+  controllerManager:
+    image: registry.k8s.io/kube-controller-manager:${k8s_version}
+  proxy:
+    image: registry.k8s.io/kube-proxy:${k8s_version}
+%{ if disable_kube_proxy }
+    disabled: true
+%{ endif }
+  scheduler:
+    image: registry.k8s.io/kube-scheduler:${k8s_version}
+
+machine:
+  install:
+    image: ${installer_image_url}
+  kubelet:
+    image: ghcr.io/siderolabs/kubelet:${k8s_version}
+
+  # Topology labels, plus any extra per-node labels (e.g. for dedicated worker pools)
+  nodeLabels:
+    topology.kubernetes.io/region: ${region}
+    topology.kubernetes.io/zone: ${node_name}
+%{ for key, value in node_labels ~}
+    ${key}: ${value}
+%{ endfor ~}
+
+  type: ${machine_type}
