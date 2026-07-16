@@ -73,6 +73,20 @@ data "talos_cluster_health" "this" {
   }
 }
 
+resource "talos_cluster_kubeconfig" "this" {
+  depends_on = [
+    talos_machine_bootstrap.this,
+    data.talos_cluster_health.this,
+  ]
+
+  node                 = local.first_control_plane_api_ip
+  client_configuration = talos_machine_secrets.this.client_configuration
+
+  timeouts = {
+    read = "1m"
+  }
+}
+
 # The provider has no native upgrade resource, so this shells out to talosctl
 # directly. Skips the upgrade if the node is already on the target image, so
 # a fresh bootstrap doesn't immediately try to "upgrade" itself.
@@ -113,19 +127,5 @@ resource "terraform_data" "upgrade" {
       NODE                 = local.talos_api_ips[each.key]
       IMAGE                = each.value.installer_image_url
     }
-  }
-}
-
-resource "talos_cluster_kubeconfig" "this" {
-  depends_on = [
-    talos_machine_bootstrap.this,
-    data.talos_cluster_health.this,
-  ]
-
-  node                 = local.first_control_plane_api_ip
-  client_configuration = talos_machine_secrets.this.client_configuration
-
-  timeouts = {
-    read = "1m"
   }
 }
