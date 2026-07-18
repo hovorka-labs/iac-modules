@@ -6,9 +6,6 @@
 #
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
-#
-# Future steps (covered in upcoming blog posts):
-#   Step 3 - Bootstrap the Talos / Kubernetes cluster
 module "talos_image" {
   source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.0.0"
 
@@ -36,4 +33,27 @@ module "vms" {
   source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.0"
 
   virtual_machines = local.virtual_machines
+}
+
+# Step 3: Bootstrap a Talos Kubernetes cluster on top of the VMs above.
+#
+# Each node's mac_address comes straight from module.vms, not a variable -
+# Proxmox assigns the MAC when the VM is created, and Talos just needs to be
+# told the same address so it can match the right NIC in its network config.
+#
+# region matters once Proxmox CSI is wired in (a future post); for now it
+# just reuses the cluster name.
+#
+# Future step (covered in the next blog post): install Cilium. Without a
+# CNI, nodes come up but nothing can actually schedule yet.
+module "talos_cluster" {
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.0.0"
+
+  cluster = {
+    name                = var.talos_cluster_name
+    region              = var.talos_cluster_name
+    gateway_api_version = var.gateway_api_version
+  }
+
+  nodes = local.talos_nodes
 }

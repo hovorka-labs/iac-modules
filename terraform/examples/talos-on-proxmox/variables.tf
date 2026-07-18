@@ -52,3 +52,21 @@ variable "network_dns_servers" {
   type        = list(string)
   default     = ["1.1.1.1"]
 }
+
+variable "talos_cluster_name" {
+  description = "Talos cluster name"
+  type        = string
+  default     = "talos-on-proxmox"
+}
+
+variable "k8s_version" {
+  description = "Kubernetes version to deploy (e.g., v1.31.4)"
+  type        = string
+  default     = "v1.31.4"
+}
+
+variable "gateway_api_version" {
+  description = "Gateway API version whose CRDs get installed at cluster bootstrap"
+  type        = string
+  default     = "v1.2.1"
+}

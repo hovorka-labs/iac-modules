@@ -12,6 +12,10 @@ proxmox_datastore = "local"
 network_gateway     = "192.168.1.1"
 network_dns_servers = ["1.1.1.1", "8.8.8.8"]
 
+talos_cluster_name  = "talos-on-proxmox"
+k8s_version         = "v1.31.4"
+gateway_api_version = "v1.2.1"
+
 nodes = {
   talos-cp-1 = {
     role         = "controlplane"

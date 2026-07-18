@@ -56,4 +56,25 @@ locals {
       }
     }
   }
+
+  # The Talos module wants a bare IP and a separate subnet mask, not the
+  # CIDR notation Proxmox's cloud-init wants above - split it once here.
+  talos_nodes = {
+    for name, node in var.nodes : name => {
+      machine_type = node.role
+      node_name    = node.proxmox_node
+      ip           = split("/", node.ip)[0]
+      subnet_mask  = split("/", node.ip)[1]
+      gateway      = var.network_gateway
+
+      mac_address         = module.vms.mac_addresses[name]
+      installer_image_url = module.talos_image.installer_image
+      k8s_version         = var.k8s_version
+
+      # Ties Talos config re-application to the same MAC used for network
+      # matching above: if the VM is ever rebuilt with a new MAC, this
+      # value changes too, and the config gets reapplied to match.
+      recreation_hash = module.vms.mac_addresses[name]
+    }
+  }
 }
