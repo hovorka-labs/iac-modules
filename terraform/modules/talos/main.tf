@@ -13,7 +13,7 @@ data "talos_client_configuration" "this" {
   cluster_name         = var.cluster.name
   client_configuration = talos_machine_secrets.this.client_configuration
   nodes                = [for ip in local.talos_api_ips : ip]
-  endpoints            = [for name, ip in local.talos_api_ips : ip if var.nodes[name].machine_type == "controlplane"]
+  endpoints            = local.control_plane_ips
 }
 
 data "talos_machine_configuration" "this" {
@@ -64,8 +64,8 @@ data "talos_cluster_health" "this" {
 
   skip_kubernetes_checks = true
   client_configuration   = data.talos_client_configuration.this.client_configuration
-  control_plane_nodes    = [for name, ip in local.talos_api_ips : ip if var.nodes[name].machine_type == "controlplane"]
-  worker_nodes           = [for name, ip in local.talos_api_ips : ip if var.nodes[name].machine_type == "worker"]
+  control_plane_nodes    = local.control_plane_ips
+  worker_nodes           = local.worker_ips
   endpoints              = data.talos_client_configuration.this.endpoints
 
   timeouts = {
@@ -88,18 +88,26 @@ resource "talos_cluster_kubeconfig" "this" {
 }
 
 # The provider has no native upgrade resource, so this shells out to talosctl
-# directly. Skips the upgrade if the node is already on the target image, so
-# a fresh bootstrap doesn't immediately try to "upgrade" itself.
+# directly. Skips a node's upgrade if it's already on the target image, so a
+# fresh bootstrap doesn't immediately try to "upgrade" itself.
+#
+# One resource for the whole cluster, not one per node — a resource can't
+# depend on other instances of itself (Terraform has to fully expand a
+# for_each/count before resolving any single instance's dependencies, so a
+# same-resource dependency chain is a cycle by construction, not just a
+# style choice). Sequencing local.upgrade_order one node at a time therefore
+# happens inside the script's own loop, not the Terraform graph — each node
+# is upgraded and then gated on the whole cluster reporting healthy again
+# before the loop moves to the next one, so nodes never reboot concurrently
+# and a multi-control-plane cluster never risks etcd losing quorum mid-way.
 resource "terraform_data" "upgrade" {
-  for_each = var.nodes
-
   depends_on = [
     talos_machine_configuration_apply.this,
     talos_machine_bootstrap.this,
     data.talos_cluster_health.this,
   ]
 
-  triggers_replace = each.value.installer_image_url
+  triggers_replace = { for name, node in var.nodes : name => node.installer_image_url }
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
@@ -110,22 +118,39 @@ resource "terraform_data" "upgrade" {
       trap 'rm -f "$TALOSCONFIG"' EXIT
       echo "$TALOS_CONFIG_CONTENT" > "$TALOSCONFIG"
 
-      TARGET=$(echo "$IMAGE" | rev | cut -d: -f1 | rev)
-      CURRENT=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
-        | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "unknown")
+      while IFS='|' read -r NODE IMAGE; do
+        [ -z "$NODE" ] && continue
 
-      if [ "$CURRENT" = "$TARGET" ]; then
-        echo "Node $NODE already on $TARGET, skipping upgrade"
-        exit 0
-      fi
+        TARGET=$(echo "$IMAGE" | rev | cut -d: -f1 | rev)
+        CURRENT=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+          | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "unknown")
 
-      echo "Upgrading node $NODE from $CURRENT to $TARGET"
-      talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait --talosconfig "$TALOSCONFIG"
+        if [ "$CURRENT" = "$TARGET" ]; then
+          echo "Node $NODE already on $TARGET, skipping upgrade"
+          continue
+        fi
+
+        echo "Upgrading node $NODE from $CURRENT to $TARGET"
+        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait --talosconfig "$TALOSCONFIG"
+
+        echo "Waiting for the cluster to report healthy before moving on to the next node"
+        talosctl health --talosconfig "$TALOSCONFIG" \
+          --control-plane-nodes "$CONTROL_PLANE_NODES" \
+          --worker-nodes "$WORKER_NODES" \
+          --wait-timeout 10m
+      done <<< "$NODES_LIST"
     EOT
     environment = {
       TALOS_CONFIG_CONTENT = nonsensitive(data.talos_client_configuration.this.talos_config)
-      NODE                 = local.talos_api_ips[each.key]
-      IMAGE                = each.value.installer_image_url
+      CONTROL_PLANE_NODES  = join(",", local.control_plane_ips)
+      WORKER_NODES         = join(",", local.worker_ips)
+
+      # One "ip|image" pair per line, control planes first — the order the
+      # script's loop upgrades nodes in.
+      NODES_LIST = join("\n", [
+        for name in local.upgrade_order :
+        "${local.talos_api_ips[name]}|${var.nodes[name].installer_image_url}"
+      ])
     }
   }
 }

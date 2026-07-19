@@ -12,6 +12,19 @@ locals {
 
   first_control_plane_api_ip = local.talos_api_ips[local.first_control_plane_name]
 
+  control_plane_ips = [for name, ip in local.talos_api_ips : ip if var.nodes[name].machine_type == "controlplane"]
+  worker_ips        = [for name, ip in local.talos_api_ips : ip if var.nodes[name].machine_type == "worker"]
+
+  # Upgrade order: control planes first (so etcd quorum is never put at risk
+  # by two control planes rebooting at once), then workers, each sorted for
+  # a stable, deterministic sequence across plans. terraform_data.upgrade's
+  # own script loops over this list one node at a time, gating each step on
+  # the whole cluster reporting healthy again before moving to the next.
+  upgrade_order = concat(
+    sort([for name, node in var.nodes : name if node.machine_type == "controlplane"]),
+    sort([for name, node in var.nodes : name if node.machine_type == "worker"])
+  )
+
   # Endpoint baked into every machine config: an explicit override wins, then
   # the VIP, then just the first control plane node's IP.
   cluster_endpoint = coalesce(
