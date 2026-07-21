@@ -30,7 +30,7 @@ module "talos_image" {
 # The static IP comes from cloud-init, which the nocloud platform picks up
 # before Talos even has a machine config to work from.
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.1"
 
   virtual_machines = local.virtual_machines
 }

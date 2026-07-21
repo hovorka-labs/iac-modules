@@ -6,7 +6,7 @@ Creates and manages Proxmox VMs from a single map variable, covering the common 
 
 ```hcl
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.1"
 
   virtual_machines = {
     talos-cp-1 = {
