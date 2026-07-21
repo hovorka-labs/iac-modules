@@ -86,6 +86,17 @@ resource "terraform_data" "control_plane_config_apply" {
         { print >> out }
       '
 
+      # etcd can't be healthy anywhere until talos_machine_bootstrap actually
+      # runs, and that happens after this whole resource - so on a genuine
+      # first-time bootstrap there's nothing valid to gate on yet between
+      # nodes. Only enforce the health gate below when an already-healthy
+      # cluster is detected up front, meaning this is a reapply against a
+      # cluster that's already running, not the initial bootstrap.
+      BOOTSTRAPPED=""
+      if talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>/dev/null | grep "^HEALTH" | grep -q "OK$"; then
+        BOOTSTRAPPED="1"
+      fi
+
       IFS=',' read -ra CP_NODES <<< "$CP_ORDER"
       for NODE in "$${CP_NODES[@]}"; do
         MODE=$(cat "$CONFIGDIR/$NODE.mode")
@@ -108,14 +119,22 @@ resource "terraform_data" "control_plane_config_apply" {
         fi
         rm -f "$APPLY_ERR"
 
+        if [ -z "$BOOTSTRAPPED" ]; then
+          echo "No existing cluster detected before this run started - skipping the etcd health gate for $NODE"
+          continue
+        fi
+
         echo "Confirming etcd is healthy on every control plane before moving on to the next one"
         # See terraform_data.upgrade for why this retries instead of
         # checking once: etcd can briefly report HEALTH ? right after a
-        # restart, before its first health probe has run.
+        # restart, before its first health probe has run. The "|| true"
+        # and the explicit "^HEALTH" check below it both matter: if
+        # talosctl itself fails here, an empty ETCD_STATUS must count as
+        # "not yet healthy", not silently pass as if it were.
         ETCD_OK=""
         for i in $(seq 1 12); do
-          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
-          if ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1 || true)
+          if echo "$ETCD_STATUS" | grep -q "^HEALTH" && ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
             ETCD_OK="1"
             break
           fi
@@ -272,11 +291,14 @@ resource "terraform_data" "upgrade" {
         # etcd can briefly report HEALTH ? ("Unknown") right after its
         # container starts, before its first health probe has even run -
         # that's not the same as actually unhealthy, so this retries for a
-        # bit instead of failing on the very first check.
+        # bit instead of failing on the very first check. The "|| true"
+        # and the explicit "^HEALTH" check below it both matter: if
+        # talosctl itself fails here, an empty ETCD_STATUS must count as
+        # "not yet healthy", not silently pass as if it were.
         ETCD_OK=""
         for i in $(seq 1 12); do
-          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
-          if ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1 || true)
+          if echo "$ETCD_STATUS" | grep -q "^HEALTH" && ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
             ETCD_OK="1"
             break
           fi
