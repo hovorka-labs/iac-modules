@@ -97,9 +97,10 @@ resource "talos_cluster_kubeconfig" "this" {
 # same-resource dependency chain is a cycle by construction, not just a
 # style choice). Sequencing local.upgrade_order one node at a time therefore
 # happens inside the script's own loop, not the Terraform graph — each node
-# is upgraded and then gated on the whole cluster reporting healthy again
-# before the loop moves to the next one, so nodes never reboot concurrently
-# and a multi-control-plane cluster never risks etcd losing quorum mid-way.
+# is upgraded, confirmed back up on the target version, and etcd is confirmed
+# healthy across every control plane before the loop moves to the next node,
+# so nodes never reboot concurrently and a multi-control-plane cluster never
+# risks etcd losing quorum mid-way.
 resource "terraform_data" "upgrade" {
   depends_on = [
     talos_machine_configuration_apply.this,
@@ -131,13 +132,38 @@ resource "terraform_data" "upgrade" {
         fi
 
         echo "Upgrading node $NODE from $CURRENT to $TARGET"
-        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait --talosconfig "$TALOSCONFIG"
+        # --wait=false on purpose: talosctl upgrade's own --wait tracks the
+        # node reaching a "ready" stage that includes Kubernetes' nodeReady
+        # condition, which never becomes true without a CNI installed - this
+        # module has no opinion on whether one exists, so it can't depend on
+        # it. Polling talosctl version below is a Talos-native equivalent
+        # that only checks what this module actually owns.
+        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait=false --talosconfig "$TALOSCONFIG"
 
-        echo "Waiting for the cluster to report healthy before moving on to the next node"
-        talosctl health --talosconfig "$TALOSCONFIG" \
-          --control-plane-nodes "$CONTROL_PLANE_NODES" \
-          --worker-nodes "$WORKER_NODES" \
-          --wait-timeout 10m
+        echo "Waiting for $NODE to come back up on $TARGET"
+        UP=""
+        for i in $(seq 1 90); do
+          sleep 10
+          ACTUAL=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+            | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "")
+          if [ "$ACTUAL" = "$TARGET" ]; then
+            UP="1"
+            break
+          fi
+        done
+        if [ -z "$UP" ]; then
+          echo "Timed out waiting for $NODE to come back up on $TARGET" >&2
+          exit 1
+        fi
+        echo "$NODE is back up on $TARGET"
+
+        echo "Confirming etcd is healthy on every control plane before moving on to the next node"
+        ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
+        echo "$ETCD_STATUS"
+        if echo "$ETCD_STATUS" | tail -n +2 | awk '{print $4}' | grep -qv "^OK$"; then
+          echo "etcd is not healthy on every control plane, stopping here" >&2
+          exit 1
+        fi
       done <<< "$NODES_LIST"
     EOT
     environment = {
