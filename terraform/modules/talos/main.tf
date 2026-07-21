@@ -160,7 +160,7 @@ resource "terraform_data" "upgrade" {
         echo "Confirming etcd is healthy on every control plane before moving on to the next node"
         ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
         echo "$ETCD_STATUS"
-        if echo "$ETCD_STATUS" | tail -n +2 | awk '{print $4}' | grep -qv "^OK$"; then
+        if echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
           echo "etcd is not healthy on every control plane, stopping here" >&2
           exit 1
         fi
