@@ -158,9 +158,21 @@ resource "terraform_data" "upgrade" {
         echo "$NODE is back up on $TARGET"
 
         echo "Confirming etcd is healthy on every control plane before moving on to the next node"
-        ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
+        # etcd can briefly report HEALTH ? ("Unknown") right after its
+        # container starts, before its first health probe has even run -
+        # that's not the same as actually unhealthy, so this retries for a
+        # bit instead of failing on the very first check.
+        ETCD_OK=""
+        for i in $(seq 1 12); do
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
+          if ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+            ETCD_OK="1"
+            break
+          fi
+          sleep 5
+        done
         echo "$ETCD_STATUS"
-        if echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+        if [ -z "$ETCD_OK" ]; then
           echo "etcd is not healthy on every control plane, stopping here" >&2
           exit 1
         fi
