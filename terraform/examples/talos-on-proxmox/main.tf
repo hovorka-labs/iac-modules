@@ -47,7 +47,7 @@ module "vms" {
 # Future step (covered in the next blog post): install Cilium. Without a
 # CNI, nodes come up but nothing can actually schedule yet.
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.0.6"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.0.7"
 
   cluster = {
     name                = var.talos_cluster_name
