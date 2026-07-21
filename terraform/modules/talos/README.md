@@ -6,7 +6,7 @@ Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders 
 
 ```hcl
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.0.1"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.0.7"
 
   cluster = {
     name                 = "hub"
@@ -46,7 +46,8 @@ module "talos_cluster" {
 
 - **`vip` vs `endpoint`.** Every machine config needs a cluster endpoint before the VIP it might describe actually exists. `cluster.endpoint` lets that be pinned explicitly (e.g. an external load balancer); otherwise the module falls back to `cluster.vip`, and finally to the first control plane node's own IP if neither is set.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` instead of a `machine.nodeTaints` patch. Once a worker has registered, NodeRestriction rejects any attempt to change its own taints through the machine config — self-registration is the only path that works reliably for dedicated worker pools.
-- **Upgrades run through `talosctl` directly**, via a `local-exec` provisioner keyed on `installer_image_url`. The provider has no native upgrade resource, and the script first checks the node's running version so a fresh bootstrap doesn't try to "upgrade" itself to the version it's already on.
+- **Upgrades run through `talosctl` directly**, via a `local-exec` provisioner keyed on `installer_image_url`. The provider has no native upgrade resource, and the script first checks the node's running version so a fresh bootstrap doesn't try to "upgrade" itself to the version it's already on. Nodes upgrade one at a time, control planes first, gated on etcd reporting healthy across every control plane before the next node starts — otherwise two control planes rebooting together could take etcd's quorum down with them.
+- **Control plane config application is sequenced the same way, for the same reason.** `talos_machine_configuration_apply` handles workers directly, since a worker restarting kubelet doesn't put cluster-wide availability at risk. Control planes go through `terraform_data.control_plane_config_apply` instead, which shells out to `talosctl apply-config` one node at a time behind the same etcd health gate as the upgrade path — any machine config change restarts kube-apiserver, controller-manager, and scheduler on that node, not just a version bump. The one exception is a genuine first-time bootstrap: etcd can't be healthy anywhere until `talos_machine_bootstrap` runs, which happens after this resource, so the gate is skipped entirely when no cluster is detected yet.
 - **`recreation_hash`** feeds a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines). It lets a node's machine config be reapplied, and the first control plane's bootstrap redone, by bumping one value instead of depending on an unrelated argument changing.
 
 <!-- BEGIN_TF_DOCS -->
@@ -75,6 +76,7 @@ No modules.
 | [talos_machine_secrets.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_secrets) | resource |
 | [terraform_data.bootstrap_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.config_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.control_plane_config_apply](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.upgrade](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [talos_client_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/client_configuration) | data source |
 | [talos_cluster_health.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/cluster_health) | data source |

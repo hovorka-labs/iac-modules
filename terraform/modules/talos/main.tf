@@ -26,8 +26,13 @@ data "talos_machine_configuration" "this" {
   config_patches   = local.node_config_patches[each.key]
 }
 
+# Workers only - control plane config gets applied by the sequential,
+# health-gated terraform_data.control_plane_config_apply below instead.
+# Workers restarting kubelet concurrently doesn't risk cluster-wide API
+# availability the way concurrent control plane restarts would, so there's
+# no need to pay for sequencing here.
 resource "talos_machine_configuration_apply" "this" {
-  for_each = var.nodes
+  for_each = { for name, node in var.nodes : name => node if node.machine_type == "worker" }
 
   node                        = local.talos_api_ips[each.key]
   apply_mode                  = each.value.apply_mode
@@ -39,6 +44,126 @@ resource "talos_machine_configuration_apply" "this" {
   }
 }
 
+# Control plane config apply, one node at a time - any machine config change
+# (not just a Talos/k8s version bump) restarts kube-apiserver, controller
+# manager, and scheduler on that node. talos_machine_configuration_apply
+# can't be sequenced the same way terraform_data.upgrade is (see that
+# resource's comment for why for_each instances can't depend on each other),
+# so control planes go through this script instead, using talosctl
+# apply-config directly. Talos treats re-applying an identical config as a
+# no-op, so applying to every control plane unconditionally on each run is
+# safe - the trigger only fires the whole thing when something actually
+# changed.
+resource "terraform_data" "control_plane_config_apply" {
+  triggers_replace = {
+    for name in keys(local.control_plane_nodes) :
+    name => nonsensitive(data.talos_machine_configuration.this[name].machine_configuration)
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+
+      TALOSCONFIG=$(mktemp)
+      CONFIGDIR=$(mktemp -d)
+      trap 'rm -f "$TALOSCONFIG"; rm -rf "$CONFIGDIR"' EXIT
+      echo "$TALOS_CONFIG_CONTENT" > "$TALOSCONFIG"
+
+      # Splits the combined blob into one file per node, named after its IP,
+      # plus a sibling .mode file - %%%NODE <ip> <mode> %%% markers delimit
+      # each node's rendered config from the next.
+      echo "$CONFIGS" | awk -v dir="$CONFIGDIR" '
+        /^%%%NODE / {
+          split($0, parts, " ")
+          node = parts[2]
+          mode = parts[3]
+          out = dir "/" node ".yaml"
+          print mode > (dir "/" node ".mode")
+          close(dir "/" node ".mode")
+          next
+        }
+        { print >> out }
+      '
+
+      # etcd can't be healthy anywhere until talos_machine_bootstrap actually
+      # runs, and that happens after this whole resource - so on a genuine
+      # first-time bootstrap there's nothing valid to gate on yet between
+      # nodes. Only enforce the health gate below when an already-healthy
+      # cluster is detected up front, meaning this is a reapply against a
+      # cluster that's already running, not the initial bootstrap.
+      BOOTSTRAPPED=""
+      if talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>/dev/null | grep "^HEALTH" | grep -q "OK$"; then
+        BOOTSTRAPPED="1"
+      fi
+
+      IFS=',' read -ra CP_NODES <<< "$CP_ORDER"
+      for NODE in "$${CP_NODES[@]}"; do
+        MODE=$(cat "$CONFIGDIR/$NODE.mode")
+        echo "Applying machine config to control plane $NODE (mode: $MODE)"
+        # A node with no config applied yet only serves its insecure
+        # maintenance API, not the authenticated one - the reverse is true
+        # once it's configured, so which one works tells us which state
+        # the node is actually in, rather than needing to track that
+        # ourselves across applies.
+        APPLY_ERR=$(mktemp)
+        if ! talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG" 2>"$APPLY_ERR"; then
+          cat "$APPLY_ERR" >&2
+          if grep -q "certificate signed by unknown authority" "$APPLY_ERR"; then
+            echo "$NODE looks unconfigured, retrying via the insecure maintenance API"
+            talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --insecure
+          else
+            rm -f "$APPLY_ERR"
+            exit 1
+          fi
+        fi
+        rm -f "$APPLY_ERR"
+
+        if [ -z "$BOOTSTRAPPED" ]; then
+          echo "No existing cluster detected before this run started - skipping the etcd health gate for $NODE"
+          continue
+        fi
+
+        echo "Confirming etcd is healthy on every control plane before moving on to the next one"
+        # See terraform_data.upgrade for why this retries instead of
+        # checking once: etcd can briefly report HEALTH ? right after a
+        # restart, before its first health probe has run. The "|| true"
+        # and the explicit "^HEALTH" check below it both matter: if
+        # talosctl itself fails here, an empty ETCD_STATUS must count as
+        # "not yet healthy", not silently pass as if it were.
+        ETCD_OK=""
+        for i in $(seq 1 12); do
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1 || true)
+          if echo "$ETCD_STATUS" | grep -q "^HEALTH" && ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+            ETCD_OK="1"
+            break
+          fi
+          sleep 5
+        done
+        echo "$ETCD_STATUS"
+        if [ -z "$ETCD_OK" ]; then
+          echo "etcd is not healthy on every control plane, stopping here" >&2
+          exit 1
+        fi
+      done
+    EOT
+    environment = {
+      TALOS_CONFIG_CONTENT = nonsensitive(data.talos_client_configuration.this.talos_config)
+      CONTROL_PLANE_NODES  = join(",", local.control_plane_ips)
+      CP_ORDER = join(",", [
+        for name in local.upgrade_order : local.talos_api_ips[name]
+        if var.nodes[name].machine_type == "controlplane"
+      ])
+
+      CONFIGS = join("\n", [
+        for name in local.upgrade_order :
+        "%%%NODE ${local.talos_api_ips[name]} ${var.nodes[name].apply_mode} %%%\n${nonsensitive(data.talos_machine_configuration.this[name].machine_configuration)}"
+        if var.nodes[name].machine_type == "controlplane"
+      ])
+    }
+  }
+}
+
 # Re-bootstrap only when the first control plane node itself gets rebuilt,
 # not on every unrelated config change.
 resource "terraform_data" "bootstrap_trigger" {
@@ -46,7 +171,10 @@ resource "terraform_data" "bootstrap_trigger" {
 }
 
 resource "talos_machine_bootstrap" "this" {
-  depends_on = [talos_machine_configuration_apply.this]
+  depends_on = [
+    talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
+  ]
 
   node                 = local.first_control_plane_api_ip
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -59,6 +187,7 @@ resource "talos_machine_bootstrap" "this" {
 data "talos_cluster_health" "this" {
   depends_on = [
     talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
     talos_machine_bootstrap.this,
   ]
 
@@ -97,12 +226,14 @@ resource "talos_cluster_kubeconfig" "this" {
 # same-resource dependency chain is a cycle by construction, not just a
 # style choice). Sequencing local.upgrade_order one node at a time therefore
 # happens inside the script's own loop, not the Terraform graph — each node
-# is upgraded and then gated on the whole cluster reporting healthy again
-# before the loop moves to the next one, so nodes never reboot concurrently
-# and a multi-control-plane cluster never risks etcd losing quorum mid-way.
+# is upgraded, confirmed back up on the target version, and etcd is confirmed
+# healthy across every control plane before the loop moves to the next node,
+# so nodes never reboot concurrently and a multi-control-plane cluster never
+# risks etcd losing quorum mid-way.
 resource "terraform_data" "upgrade" {
   depends_on = [
     talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
     talos_machine_bootstrap.this,
     data.talos_cluster_health.this,
   ]
@@ -131,13 +262,53 @@ resource "terraform_data" "upgrade" {
         fi
 
         echo "Upgrading node $NODE from $CURRENT to $TARGET"
-        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait --talosconfig "$TALOSCONFIG"
+        # --wait=false on purpose: talosctl upgrade's own --wait tracks the
+        # node reaching a "ready" stage that includes Kubernetes' nodeReady
+        # condition, which never becomes true without a CNI installed - this
+        # module has no opinion on whether one exists, so it can't depend on
+        # it. Polling talosctl version below is a Talos-native equivalent
+        # that only checks what this module actually owns.
+        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait=false --talosconfig "$TALOSCONFIG"
 
-        echo "Waiting for the cluster to report healthy before moving on to the next node"
-        talosctl health --talosconfig "$TALOSCONFIG" \
-          --control-plane-nodes "$CONTROL_PLANE_NODES" \
-          --worker-nodes "$WORKER_NODES" \
-          --wait-timeout 10m
+        echo "Waiting for $NODE to come back up on $TARGET"
+        UP=""
+        for i in $(seq 1 90); do
+          sleep 10
+          ACTUAL=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+            | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "")
+          if [ "$ACTUAL" = "$TARGET" ]; then
+            UP="1"
+            break
+          fi
+        done
+        if [ -z "$UP" ]; then
+          echo "Timed out waiting for $NODE to come back up on $TARGET" >&2
+          exit 1
+        fi
+        echo "$NODE is back up on $TARGET"
+
+        echo "Confirming etcd is healthy on every control plane before moving on to the next node"
+        # etcd can briefly report HEALTH ? ("Unknown") right after its
+        # container starts, before its first health probe has even run -
+        # that's not the same as actually unhealthy, so this retries for a
+        # bit instead of failing on the very first check. The "|| true"
+        # and the explicit "^HEALTH" check below it both matter: if
+        # talosctl itself fails here, an empty ETCD_STATUS must count as
+        # "not yet healthy", not silently pass as if it were.
+        ETCD_OK=""
+        for i in $(seq 1 12); do
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1 || true)
+          if echo "$ETCD_STATUS" | grep -q "^HEALTH" && ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+            ETCD_OK="1"
+            break
+          fi
+          sleep 5
+        done
+        echo "$ETCD_STATUS"
+        if [ -z "$ETCD_OK" ]; then
+          echo "etcd is not healthy on every control plane, stopping here" >&2
+          exit 1
+        fi
       done <<< "$NODES_LIST"
     EOT
     environment = {

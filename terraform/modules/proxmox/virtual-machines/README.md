@@ -6,7 +6,7 @@ Creates and manages Proxmox VMs from a single map variable, covering the common 
 
 ```hcl
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.1"
 
   virtual_machines = {
     talos-cp-1 = {
@@ -63,7 +63,7 @@ A couple of things here exist because of problems hit in practice, not because t
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.111.0 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.111.1 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 ## Modules
 
@@ -84,5 +84,4 @@ No modules.
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_mac_addresses"></a> [mac\_addresses](#output\_mac\_addresses) | MAC address of the first network device for each VM |
-| <a name="output_virtual_machines"></a> [virtual\_machines](#output\_virtual\_machines) | The full proxmox\_virtual\_environment\_vm resource for each VM |
 <!-- END_TF_DOCS -->
