@@ -90,7 +90,23 @@ resource "terraform_data" "control_plane_config_apply" {
       for NODE in "$${CP_NODES[@]}"; do
         MODE=$(cat "$CONFIGDIR/$NODE.mode")
         echo "Applying machine config to control plane $NODE (mode: $MODE)"
-        talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG"
+        # A node with no config applied yet only serves its insecure
+        # maintenance API, not the authenticated one - the reverse is true
+        # once it's configured, so which one works tells us which state
+        # the node is actually in, rather than needing to track that
+        # ourselves across applies.
+        APPLY_ERR=$(mktemp)
+        if ! talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG" 2>"$APPLY_ERR"; then
+          cat "$APPLY_ERR" >&2
+          if grep -q "certificate signed by unknown authority" "$APPLY_ERR"; then
+            echo "$NODE looks unconfigured, retrying via the insecure maintenance API"
+            talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --insecure
+          else
+            rm -f "$APPLY_ERR"
+            exit 1
+          fi
+        fi
+        rm -f "$APPLY_ERR"
 
         echo "Confirming etcd is healthy on every control plane before moving on to the next one"
         # See terraform_data.upgrade for why this retries instead of
