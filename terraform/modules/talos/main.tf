@@ -26,8 +26,13 @@ data "talos_machine_configuration" "this" {
   config_patches   = local.node_config_patches[each.key]
 }
 
+# Workers only - control plane config gets applied by the sequential,
+# health-gated terraform_data.control_plane_config_apply below instead.
+# Workers restarting kubelet concurrently doesn't risk cluster-wide API
+# availability the way concurrent control plane restarts would, so there's
+# no need to pay for sequencing here.
 resource "talos_machine_configuration_apply" "this" {
-  for_each = var.nodes
+  for_each = { for name, node in var.nodes : name => node if node.machine_type == "worker" }
 
   node                        = local.talos_api_ips[each.key]
   apply_mode                  = each.value.apply_mode
@@ -39,6 +44,91 @@ resource "talos_machine_configuration_apply" "this" {
   }
 }
 
+# Control plane config apply, one node at a time - any machine config change
+# (not just a Talos/k8s version bump) restarts kube-apiserver, controller
+# manager, and scheduler on that node. talos_machine_configuration_apply
+# can't be sequenced the same way terraform_data.upgrade is (see that
+# resource's comment for why for_each instances can't depend on each other),
+# so control planes go through this script instead, using talosctl
+# apply-config directly. Talos treats re-applying an identical config as a
+# no-op, so applying to every control plane unconditionally on each run is
+# safe - the trigger only fires the whole thing when something actually
+# changed.
+resource "terraform_data" "control_plane_config_apply" {
+  triggers_replace = {
+    for name in keys(local.control_plane_nodes) :
+    name => nonsensitive(data.talos_machine_configuration.this[name].machine_configuration)
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+
+      TALOSCONFIG=$(mktemp)
+      CONFIGDIR=$(mktemp -d)
+      trap 'rm -f "$TALOSCONFIG"; rm -rf "$CONFIGDIR"' EXIT
+      echo "$TALOS_CONFIG_CONTENT" > "$TALOSCONFIG"
+
+      # Splits the combined blob into one file per node, named after its IP,
+      # plus a sibling .mode file - %%%NODE <ip> <mode> %%% markers delimit
+      # each node's rendered config from the next.
+      echo "$CONFIGS" | awk -v dir="$CONFIGDIR" '
+        /^%%%NODE / {
+          split($0, parts, " ")
+          node = parts[2]
+          mode = parts[3]
+          out = dir "/" node ".yaml"
+          print mode > (dir "/" node ".mode")
+          close(dir "/" node ".mode")
+          next
+        }
+        { print >> out }
+      '
+
+      IFS=',' read -ra CP_NODES <<< "$CP_ORDER"
+      for NODE in "$${CP_NODES[@]}"; do
+        MODE=$(cat "$CONFIGDIR/$NODE.mode")
+        echo "Applying machine config to control plane $NODE (mode: $MODE)"
+        talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG"
+
+        echo "Confirming etcd is healthy on every control plane before moving on to the next one"
+        # See terraform_data.upgrade for why this retries instead of
+        # checking once: etcd can briefly report HEALTH ? right after a
+        # restart, before its first health probe has run.
+        ETCD_OK=""
+        for i in $(seq 1 12); do
+          ETCD_STATUS=$(talosctl service etcd --nodes "$CONTROL_PLANE_NODES" --talosconfig "$TALOSCONFIG" 2>&1)
+          if ! echo "$ETCD_STATUS" | grep "^HEALTH" | grep -qv "OK$"; then
+            ETCD_OK="1"
+            break
+          fi
+          sleep 5
+        done
+        echo "$ETCD_STATUS"
+        if [ -z "$ETCD_OK" ]; then
+          echo "etcd is not healthy on every control plane, stopping here" >&2
+          exit 1
+        fi
+      done
+    EOT
+    environment = {
+      TALOS_CONFIG_CONTENT = nonsensitive(data.talos_client_configuration.this.talos_config)
+      CONTROL_PLANE_NODES  = join(",", local.control_plane_ips)
+      CP_ORDER = join(",", [
+        for name in local.upgrade_order : local.talos_api_ips[name]
+        if var.nodes[name].machine_type == "controlplane"
+      ])
+
+      CONFIGS = join("\n", [
+        for name in local.upgrade_order :
+        "%%%NODE ${local.talos_api_ips[name]} ${var.nodes[name].apply_mode} %%%\n${nonsensitive(data.talos_machine_configuration.this[name].machine_configuration)}"
+        if var.nodes[name].machine_type == "controlplane"
+      ])
+    }
+  }
+}
+
 # Re-bootstrap only when the first control plane node itself gets rebuilt,
 # not on every unrelated config change.
 resource "terraform_data" "bootstrap_trigger" {
@@ -46,7 +136,10 @@ resource "terraform_data" "bootstrap_trigger" {
 }
 
 resource "talos_machine_bootstrap" "this" {
-  depends_on = [talos_machine_configuration_apply.this]
+  depends_on = [
+    talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
+  ]
 
   node                 = local.first_control_plane_api_ip
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -59,6 +152,7 @@ resource "talos_machine_bootstrap" "this" {
 data "talos_cluster_health" "this" {
   depends_on = [
     talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
     talos_machine_bootstrap.this,
   ]
 
@@ -104,6 +198,7 @@ resource "talos_cluster_kubeconfig" "this" {
 resource "terraform_data" "upgrade" {
   depends_on = [
     talos_machine_configuration_apply.this,
+    terraform_data.control_plane_config_apply,
     talos_machine_bootstrap.this,
     data.talos_cluster_health.this,
   ]
