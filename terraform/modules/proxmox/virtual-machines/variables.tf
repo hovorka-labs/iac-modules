@@ -1,17 +1,24 @@
-variable "vms" {
-  description = "Map of VMs to create"
+variable "virtual_machines" {
+  description = "Map of VMs to create. Map key becomes the VM name."
   type = map(object({
-    node_name       = string
+    node_name   = string
+    vm_id       = optional(number)
+    description = optional(string)
+    tags        = optional(list(string))
+    on_boot     = optional(bool)
+
+    # Forces recreation of the VM on demand, without depending on any other
+    # argument changing. See `terraform_data.vm_recreate_trigger` in main.tf.
     recreation_hash = optional(string)
-    vm_id           = optional(number)
-    name            = optional(string)
-    description     = optional(string)
-    tags            = optional(list(string))
-    on_boot         = optional(bool)
-    machine         = optional(string)
-    scsi_hardware   = optional(string)
-    bios            = optional(string)
-    agent_enabled   = optional(bool)
+
+    machine       = optional(string)
+    scsi_hardware = optional(string)
+    bios          = optional(string)
+
+    # Requires the QEMU guest agent running inside the guest OS, otherwise
+    # Terraform just waits out `agent_timeout` on every apply.
+    agent_enabled = optional(bool)
+    agent_timeout = optional(string)
 
     cpu = object({
       cores = number
@@ -22,7 +29,7 @@ variable "vms" {
 
     memory = object({
       dedicated = number
-      floating  = optional(number)
+      floating  = optional(number) # enables memory ballooning
     })
 
     network_devices = optional(list(object({
@@ -34,18 +41,18 @@ variable "vms" {
     })))
 
     disks = optional(list(object({
-      datastore_id    = string
-      interface       = optional(string)
-      iothread        = optional(bool)
-      cache           = optional(string)
-      discard         = optional(string)
-      ssd             = optional(bool)
-      file_format     = optional(string)
-      size            = number
-      file_id         = optional(string)
-      updated_file_id = optional(string)
+      datastore_id = string
+      interface    = optional(string)
+      iothread     = optional(bool)
+      cache        = optional(string)
+      discard      = optional(string)
+      ssd          = optional(bool)
+      file_format  = optional(string)
+      size         = number
+      file_id      = optional(string) # source image/template to clone from
     })))
 
+    # Defaults to ide3: ide2 is reserved for the cloud-init drive below.
     cdrom = optional(object({
       file_id   = optional(string)
       interface = optional(string)
@@ -66,13 +73,13 @@ variable "vms" {
         gateway = string
       })
       auth = optional(object({
-        username          = string
-        password          = optional(string)
-        keys              = optional(list(string))
-        user_data_file_id = optional(string)
+        username = string
+        password = optional(string)
+        keys     = optional(list(string))
       }))
     }))
 
+    # Clones this VM from an existing template instead of building it fresh.
     clone = optional(object({
       vm_id        = number
       datastore_id = optional(string)
@@ -81,6 +88,8 @@ variable "vms" {
       full         = optional(bool)
     }))
 
+    # PCI/GPU passthrough. `mapping` refers to a resource mapping configured
+    # under Datacenter > Resource Mappings in Proxmox.
     pci_devices = optional(list(object({
       device  = string
       mapping = optional(string)

@@ -1,15 +1,14 @@
+# Lets a VM be recreated on demand (e.g. after rebuilding the image it was
+# cloned from) without depending on a real config change to trigger it.
 resource "terraform_data" "vm_recreate_trigger" {
-  for_each = var.vms
+  for_each = var.virtual_machines
   input = {
-    # Custom recreation hash (optional)
-    # Required if we want to trigger recreation based
-    # on specific changes in configuration
     hash = try(each.value.recreation_hash, "default")
   }
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
-  for_each = var.vms
+  for_each = var.virtual_machines
 
   node_name = each.value.node_name
   name      = each.key
@@ -70,6 +69,8 @@ resource "proxmox_virtual_environment_vm" "this" {
     device = try(each.value.serial_device.device, null)
   }
 
+  # Defaults to ide3 so it doesn't collide with the cloud-init drive, which
+  # Proxmox always attaches on ide2.
   cdrom {
     file_id   = try(each.value.cdrom.file_id, "none")
     interface = try(each.value.cdrom.interface, "ide3")
@@ -86,6 +87,7 @@ resource "proxmox_virtual_environment_vm" "this" {
     content {
       datastore_id = initialization.value.datastore_id
       interface    = try(initialization.value.interface, null)
+
       dynamic "dns" {
         for_each = try(initialization.value.dns, null) != null ? { "dns" = initialization.value.dns } : {}
         content {
@@ -99,6 +101,7 @@ resource "proxmox_virtual_environment_vm" "this" {
           gateway = initialization.value.ipv4.gateway
         }
       }
+
       dynamic "user_account" {
         for_each = try(initialization.value.auth, null) != null ? [initialization.value.auth] : []
         content {
@@ -131,6 +134,7 @@ resource "proxmox_virtual_environment_vm" "this" {
       xvga    = try(hostpci.value.xvga, false)
     }
   }
+
   lifecycle {
     replace_triggered_by = [terraform_data.vm_recreate_trigger[each.key]]
   }

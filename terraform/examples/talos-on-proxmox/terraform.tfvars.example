@@ -1,0 +1,30 @@
+proxmox_endpoint  = "https://pve.example.com:8006"
+proxmox_api_token = "terraform@pve!provider=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_insecure  = true
+
+talos_version     = "v1.9.5"
+proxmox_datastore = "local"
+
+# Omit proxmox_nodes to download the image to every node in the cluster,
+# or pin to specific nodes:
+# proxmox_nodes = ["pve1", "pve2", "pve3"]
+
+network_gateway     = "192.168.1.1"
+network_dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+talos_cluster_name  = "talos-on-proxmox"
+k8s_version         = "v1.31.4"
+gateway_api_version = "v1.2.1"
+
+nodes = {
+  talos-cp-1 = {
+    role         = "controlplane"
+    proxmox_node = "pve1"
+    ip           = "192.168.1.10/24"
+  }
+  talos-worker-1 = {
+    role         = "worker"
+    proxmox_node = "pve1"
+    ip           = "192.168.1.20/24"
+  }
+}

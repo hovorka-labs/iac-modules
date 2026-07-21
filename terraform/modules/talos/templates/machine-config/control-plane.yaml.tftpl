@@ -1,10 +1,8 @@
 # Control plane specific configuration
 
 cluster:
-  # Allow workloads on control plane nodes
-  allowSchedulingOnControlPlanes: ${allowSchedulingOnControlPlanes}
+  allowSchedulingOnControlPlanes: ${allow_scheduling_on_controlplanes}
 
-  # API server configuration
   apiServer:
     certSANs:
 %{ if vip != null ~}
@@ -13,37 +11,32 @@ cluster:
 %{ for san in api_server_extra_sans ~}
       - ${san}
 %{ endfor ~}
-    ${indent(4, api_server)}
+    ${indent(4, api_server_config)}
 
 %{ if external_cloud_provider }
   externalCloudProvider:
     enabled: true
 
 %{ endif }
-  # Cluster service discovery
   discovery:
     enabled: true
     registries:
       service:
         disabled: false
 
-  # Additional Kubernetes manifests
   extraManifests: ${extra_manifests}
 
-  # Network CNI configuration
   network:
     cni:
-      name: none  # CNI will be installed separately
-%{ if pod_subnets != null && length(pod_subnets) > 0 }
-    # The pod subnet CIDRs
+      name: none # CNI is installed separately
+%{ if length(pod_subnets) > 0 }
     podSubnets:
 %{ for cidr in pod_subnets }
       - ${cidr}
 %{ endfor }
 %{ endif }
 
-%{ if service_subnets != null && length(service_subnets) > 0 }
-    # The service subnet CIDRs
+%{ if length(service_subnets) > 0 }
     serviceSubnets:
 %{ for cidr in service_subnets }
       - ${cidr}
@@ -51,7 +44,6 @@ cluster:
 %{ endif }
 
 machine:
-  # Network configuration
   network:
 %{ if use_dhcp ~}
     interfaces:

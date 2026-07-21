@@ -4,7 +4,6 @@ machine:
   sysctls:
     vm.max_map_count: "524288"
 
-  # Network configuration
   network:
 %{ if use_dhcp ~}
     interfaces:
