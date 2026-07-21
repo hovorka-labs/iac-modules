@@ -1,0 +1,79 @@
+# Control plane specific configuration
+
+cluster:
+  allowSchedulingOnControlPlanes: ${allow_scheduling_on_controlplanes}
+
+  apiServer:
+    certSANs:
+%{ if vip != null ~}
+      - ${vip}
+%{ endif ~}
+%{ for san in api_server_extra_sans ~}
+      - ${san}
+%{ endfor ~}
+    ${indent(4, api_server_config)}
+
+%{ if external_cloud_provider }
+  externalCloudProvider:
+    enabled: true
+
+%{ endif }
+  discovery:
+    enabled: true
+    registries:
+      service:
+        disabled: false
+
+  extraManifests: ${extra_manifests}
+
+  network:
+    cni:
+      name: none # CNI is installed separately
+%{ if length(pod_subnets) > 0 }
+    podSubnets:
+%{ for cidr in pod_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+
+%{ if length(service_subnets) > 0 }
+    serviceSubnets:
+%{ for cidr in service_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+
+machine:
+  network:
+%{ if use_dhcp ~}
+    interfaces:
+      - interface: eth0
+        dhcp: true
+%{ else ~}
+%{ if interface_name != "" ~}
+    interfaces:
+      - interface: ${interface_name}
+        addresses:
+          - ${ip}/${subnet_mask}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ else ~}
+%{ if mac_address != "" ~}
+    interfaces:
+      - addresses:
+          - ${ip}/${subnet_mask}
+        deviceSelector:
+          hardwareAddr: ${mac_address}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ if vip != null ~}
+        vip:
+          ip: ${vip}
+%{ endif ~}
+%{ endif ~}
+%{ endif ~}
+%{ endif ~}

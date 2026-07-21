@@ -32,3 +32,41 @@ variable "proxmox_datastore" {
   type        = string
   default     = "local"
 }
+
+variable "nodes" {
+  description = "Talos nodes to provision as Proxmox VMs, keyed by node name"
+  type = map(object({
+    role         = string # "controlplane" or "worker"
+    proxmox_node = string
+    ip           = string # CIDR, e.g. "192.168.1.10/24"
+  }))
+}
+
+variable "network_gateway" {
+  description = "Gateway address handed to each node via cloud-init"
+  type        = string
+}
+
+variable "network_dns_servers" {
+  description = "DNS servers handed to each node via cloud-init"
+  type        = list(string)
+  default     = ["1.1.1.1"]
+}
+
+variable "talos_cluster_name" {
+  description = "Talos cluster name"
+  type        = string
+  default     = "talos-on-proxmox"
+}
+
+variable "k8s_version" {
+  description = "Kubernetes version to deploy (e.g., v1.31.4)"
+  type        = string
+  default     = "v1.31.4"
+}
+
+variable "gateway_api_version" {
+  description = "Gateway API version whose CRDs get installed at cluster bootstrap"
+  type        = string
+  default     = "v1.2.1"
+}

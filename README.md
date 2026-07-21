@@ -53,7 +53,7 @@ Pin to a [release tag](https://github.com/hovorka-labs/iac-modules/tags) with `?
 
 | Example | What it builds |
 |---------|----------------|
-| [proxmox-talos-cluster](examples/proxmox-talos-cluster) | Full Talos K8s cluster on Proxmox with Cilium, CSI, and monitoring CRDs |
+| [talos-on-proxmox](terraform/examples/talos-on-proxmox) | Talos images + VMs on Proxmox, built up step by step in the Homelab Diary blog series |
 
 ## Development
 
