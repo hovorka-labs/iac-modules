@@ -7,7 +7,7 @@ locals {
   # overridden when it isn't directly reachable, e.g. a private IP behind a
   # public one on Hetzner.
   talos_api_ips = {
-    for name, node in var.nodes : name => try(node.talos_api_ip, node.ip)
+    for name, node in var.nodes : name => coalesce(node.talos_api_ip, node.ip)
   }
 
   first_control_plane_api_ip = local.talos_api_ips[local.first_control_plane_name]
