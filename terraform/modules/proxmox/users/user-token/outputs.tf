@@ -4,5 +4,6 @@ output "full_token_id" {
 }
 
 output "token_value" {
-  value = split("=", proxmox_user_token.this.value)[1]
+  value     = split("=", proxmox_user_token.this.value)[1]
+  sensitive = true
 }

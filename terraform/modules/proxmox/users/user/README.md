@@ -4,12 +4,12 @@
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | 0.110.0 |
+| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | >= 0.110.0 |
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.110.0 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.111.1 |
 ## Modules
 
 No modules.
@@ -17,8 +17,8 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [proxmox_acl.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/acl) | resource |
-| [proxmox_virtual_environment_user.this](https://registry.terraform.io/providers/bpg/proxmox/0.110.0/docs/resources/virtual_environment_user) | resource |
+| [proxmox_acl.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/acl) | resource |
+| [proxmox_virtual_environment_user.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_user) | resource |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
