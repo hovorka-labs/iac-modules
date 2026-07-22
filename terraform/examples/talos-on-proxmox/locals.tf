@@ -20,6 +20,11 @@ locals {
 
       cpu = {
         cores = local.role_defaults[node.role].cores
+        # host passes through the Proxmox host's own CPU features. The
+        # module no longer picks a default for you (v1.0.2+) - Proxmox's
+        # own qemu64 default lacks instruction sets the Talos kernel wants,
+        # so leaving this unset silently produces VMs that fail to boot.
+        type = "host"
       }
       memory = {
         dedicated = local.role_defaults[node.role].memory

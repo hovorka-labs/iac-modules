@@ -51,6 +51,7 @@ A couple of things here exist because of problems hit in practice, not because t
 - **`recreation_hash`** feeds a `terraform_data` resource wired up via `replace_triggered_by`. It lets a VM be recreated (re-cloned, re-initialized, etc.) by bumping one value, without needing an unrelated argument to change first.
 - **`cdrom` defaults to `ide3`**, because Proxmox always attaches the cloud-init drive on `ide2` — reusing it would silently break cloud-init.
 - **`clone.retries`** exists because cloning a template under load on this cluster occasionally fails transiently; a couple of retries is cheaper than debugging it.
+- **`cpu.type` has no default** - it's passed straight to the provider, which falls back to its own default (`qemu64`) if you don't set one. That default is a deliberately conservative, feature-poor virtual CPU model for cross-host migration compatibility, and it can be missing instruction sets a modern kernel expects - Talos VMs left on it can fail to boot in a way that looks like a Proxmox or networking problem, not a CPU one. Set it explicitly (`host` is usually the right call unless you need migration compatibility across mismatched hardware).
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
