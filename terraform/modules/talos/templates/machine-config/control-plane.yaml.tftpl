@@ -26,24 +26,18 @@ cluster:
 
   extraManifests: ${extra_manifests}
 
-  network:
-    cni:
-      name: none # CNI is installed separately
-%{ if length(pod_subnets) > 0 }
-    podSubnets:
-%{ for cidr in pod_subnets }
-      - ${cidr}
-%{ endfor }
-%{ endif }
-
-%{ if length(service_subnets) > 0 }
-    serviceSubnets:
-%{ for cidr in service_subnets }
-      - ${cidr}
-%{ endfor }
-%{ endif }
-
 machine:
+%{ if allow_scheduling_on_controlplanes ~}
+  # Talos labels every control plane node to keep it out of external/L2
+  # load balancer backend pools by default - the right call for a normal
+  # HA cluster, but if this node is also meant to take workload traffic
+  # (single-node or all-in-one setups), the label has to go, or nothing
+  # can reach it through a LoadBalancer Service.
+  nodeLabels:
+    node.kubernetes.io/exclude-from-external-load-balancers:
+      $patch: delete
+
+%{ endif ~}
   network:
 %{ if use_dhcp ~}
     interfaces:

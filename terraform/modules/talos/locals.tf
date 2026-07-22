@@ -69,6 +69,8 @@ locals {
           machine_type        = node.machine_type
           disable_kube_proxy  = var.cluster.disable_kube_proxy
           node_labels         = node.node_labels
+          pod_subnets         = var.cluster.pod_subnets
+          service_subnets     = var.cluster.service_subnets
         })
       ],
       length(local.kubelet_extra_args[name]) > 0 ? [
@@ -88,8 +90,6 @@ locals {
           allow_scheduling_on_controlplanes = var.cluster.allow_scheduling_on_controlplanes
           external_cloud_provider           = var.cluster.external_cloud_provider
           extra_manifests                   = jsonencode(concat(var.cluster.extra_manifests, local.gateway_api_manifests))
-          pod_subnets                       = var.cluster.pod_subnets
-          service_subnets                   = var.cluster.service_subnets
           ip                                = node.ip
           mac_address                       = lower(node.mac_address)
           interface_name                    = node.interface_name

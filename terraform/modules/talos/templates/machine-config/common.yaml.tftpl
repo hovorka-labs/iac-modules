@@ -13,6 +13,24 @@ cluster:
   scheduler:
     image: registry.k8s.io/kube-scheduler:${k8s_version}
 
+  # Cluster-wide, so set identically on every node rather than just control
+  # planes - Talos validates this stays consistent across the cluster.
+  network:
+    cni:
+      name: none # CNI is installed separately
+%{ if length(pod_subnets) > 0 }
+    podSubnets:
+%{ for cidr in pod_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+%{ if length(service_subnets) > 0 }
+    serviceSubnets:
+%{ for cidr in service_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+
 machine:
   install:
     image: ${installer_image_url}
