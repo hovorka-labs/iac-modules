@@ -37,12 +37,6 @@ machine:
   kubelet:
     image: ghcr.io/siderolabs/kubelet:${k8s_version}
 
-  # Explicit, rather than left to whatever the platform hands back - some
-  # platforms (e.g. OpenStack via cloud-init) append their own suffix
-  # (".novalocal") to a DHCP- or metadata-derived hostname otherwise.
-  network:
-    hostname: ${hostname}
-
   # Topology labels, plus any extra per-node labels (e.g. for dedicated worker pools)
   nodeLabels:
     topology.kubernetes.io/region: ${region}

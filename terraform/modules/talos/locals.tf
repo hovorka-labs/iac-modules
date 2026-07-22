@@ -61,7 +61,6 @@ locals {
     for name, node in var.nodes : name => concat(
       [
         templatefile("${path.module}/templates/machine-config/common.yaml.tftpl", {
-          hostname            = name
           zone                = coalesce(node.zone, name)
           region              = var.cluster.region
           k8s_version         = node.k8s_version
@@ -71,6 +70,22 @@ locals {
           node_labels         = node.node_labels
           pod_subnets         = var.cluster.pod_subnets
           service_subnets     = var.cluster.service_subnets
+        }),
+        # A standalone HostnameConfig document (Talos >= 1.12's replacement
+        # for the legacy machine.network.hostname field, which now conflicts
+        # with it - Talos generates a HostnameConfig with auto: stable into
+        # every node's base config, and patching the legacy field on top of
+        # that gets rejected outright: "static hostname is already set in
+        # v1alpha1 config"). auto: off is required alongside hostname, not
+        # just the hostname value alone - it's what actually disables the
+        # generated auto config; explicit, rather than left to whatever the
+        # platform hands back, since some platforms (e.g. OpenStack via
+        # cloud-init) append their own suffix (".novalocal") otherwise.
+        yamlencode({
+          apiVersion = "v1alpha1"
+          kind       = "HostnameConfig"
+          hostname   = name
+          auto       = "off"
         })
       ],
       length(local.kubelet_extra_args[name]) > 0 ? [
