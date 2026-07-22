@@ -29,14 +29,18 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   cpu {
     cores = each.value.cpu.cores
-    type  = each.value.cpu.type != null ? each.value.cpu.type : "x86-64-v2-AES"
+    type  = try(each.value.cpu.type, null)
     flags = try(each.value.cpu.flags, [""])
-    units = each.value.cpu.units != null ? each.value.cpu.units : 100
+    units = try(each.value.cpu.units, null)
   }
 
   memory {
     dedicated = each.value.memory.dedicated
-    floating  = try(each.value.memory.floating, 0)
+    # Below dedicated, this enables ballooning (Proxmox can reclaim memory
+    # under host pressure); 0 means no ballooning, memory stays pinned at
+    # dedicated - the safer default for a module with no opinion on whether
+    # a given VM's workload tolerates being squeezed.
+    floating = try(each.value.memory.floating, 0)
   }
 
   dynamic "network_device" {
