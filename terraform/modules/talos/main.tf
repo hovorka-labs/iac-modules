@@ -81,21 +81,18 @@ resource "talos_cluster_kubeconfig" "this" {
   timeouts = {
     read = "1m"
   }
-}
 
-# Nothing before this point actually confirms the Kubernetes API is
-# reachable through cluster_endpoint (the VIP, if one is set) - bootstrap
-# and cluster_health both only ever talk to the Talos API directly, never
-# Kubernetes. keepalived only assigns the VIP to a node once that node's
-# own kube-apiserver passes its health check, which takes a few seconds
-# after bootstrap, so a consumer that immediately tries to use the
-# kubeconfig this module hands back (e.g. a helm_release depending on this
-# module) can hit a bare connection refused. Unlike the checks this module
-# deliberately skips elsewhere, this has nothing to do with node readiness
-# or a CNI - the API server comes up on its own, so it's safe to wait for.
-resource "terraform_data" "kubernetes_reachable" {
-  depends_on = [talos_cluster_kubeconfig.this]
-
+  # Nothing before this point actually confirms the Kubernetes API is
+  # reachable through cluster_endpoint (the VIP, if one is set) - bootstrap
+  # and cluster_health both only ever talk to the Talos API directly, never
+  # Kubernetes. keepalived only assigns the VIP to a node once that node's
+  # own kube-apiserver passes its health check, which takes a few seconds
+  # after bootstrap, so a consumer that immediately tries to use the
+  # kubeconfig output (e.g. a helm_release depending on this module) can
+  # hit a bare connection refused. Unlike the checks this module
+  # deliberately skips elsewhere, this has nothing to do with node
+  # readiness or a CNI - the API server comes up on its own, so it's safe
+  # to wait for right here rather than needing a dedicated resource.
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
     command     = <<-EOT
