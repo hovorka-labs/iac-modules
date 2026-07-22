@@ -81,38 +81,6 @@ resource "talos_cluster_kubeconfig" "this" {
   timeouts = {
     read = "1m"
   }
-
-  # Nothing before this point actually confirms the Kubernetes API is
-  # reachable through cluster_endpoint (the VIP, if one is set) - bootstrap
-  # and cluster_health both only ever talk to the Talos API directly, never
-  # Kubernetes. keepalived only assigns the VIP to a node once that node's
-  # own kube-apiserver passes its health check, which takes a few seconds
-  # after bootstrap, so a consumer that immediately tries to use the
-  # kubeconfig output (e.g. a helm_release depending on this module) can
-  # hit a bare connection refused. Unlike the checks this module
-  # deliberately skips elsewhere, this has nothing to do with node
-  # readiness or a CNI - the API server comes up on its own, so it's safe
-  # to wait for right here rather than needing a dedicated resource.
-  provisioner "local-exec" {
-    interpreter = ["/bin/bash", "-c"]
-    command     = <<-EOT
-      set -euo pipefail
-
-      for i in $(seq 1 24); do
-        if curl -sk --connect-timeout 5 --max-time 10 -o /dev/null "https://$CLUSTER_ENDPOINT:6443/version"; then
-          echo "Kubernetes API is reachable through $CLUSTER_ENDPOINT"
-          exit 0
-        fi
-        sleep 5
-      done
-
-      echo "Kubernetes API never became reachable through $CLUSTER_ENDPOINT" >&2
-      exit 1
-    EOT
-    environment = {
-      CLUSTER_ENDPOINT = local.cluster_endpoint
-    }
-  }
 }
 
 # The provider has no native upgrade resource, so this shells out to talosctl
