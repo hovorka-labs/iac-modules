@@ -106,12 +106,17 @@ resource "terraform_data" "control_plane_config_apply" {
         # once it's configured, so which one works tells us which state
         # the node is actually in, rather than needing to track that
         # ourselves across applies.
+        # --endpoints pins this call to $NODE itself instead of letting
+        # talosctl pick any configured control plane to route through - one
+        # of the others can be mid-reboot from a config just applied to it
+        # a moment ago, and a routing failure there has nothing to do with
+        # whether $NODE itself is reachable.
         APPLY_ERR=$(mktemp)
-        if ! talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG" 2>"$APPLY_ERR"; then
+        if ! talosctl apply-config --nodes "$NODE" --endpoints "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --talosconfig "$TALOSCONFIG" 2>"$APPLY_ERR"; then
           cat "$APPLY_ERR" >&2
           if grep -q "certificate signed by unknown authority" "$APPLY_ERR"; then
             echo "$NODE looks unconfigured, retrying via the insecure maintenance API"
-            talosctl apply-config --nodes "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --insecure
+            talosctl apply-config --nodes "$NODE" --endpoints "$NODE" --file "$CONFIGDIR/$NODE.yaml" --mode "$MODE" --insecure
           else
             rm -f "$APPLY_ERR"
             exit 1
@@ -253,7 +258,12 @@ resource "terraform_data" "upgrade" {
         [ -z "$NODE" ] && continue
 
         TARGET=$(echo "$IMAGE" | rev | cut -d: -f1 | rev)
-        CURRENT=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+        # --endpoints pins every call below to $NODE itself instead of
+        # letting talosctl route through any configured control plane - one
+        # of the others can be mid-reboot from an earlier iteration of this
+        # same loop, and a routing failure there has nothing to do with
+        # whether $NODE itself is reachable.
+        CURRENT=$(talosctl version --nodes "$NODE" --endpoints "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
           | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "unknown")
 
         if [ "$CURRENT" = "$TARGET" ]; then
@@ -268,13 +278,13 @@ resource "terraform_data" "upgrade" {
         # module has no opinion on whether one exists, so it can't depend on
         # it. Polling talosctl version below is a Talos-native equivalent
         # that only checks what this module actually owns.
-        talosctl upgrade --nodes "$NODE" --image "$IMAGE" --preserve --wait=false --talosconfig "$TALOSCONFIG"
+        talosctl upgrade --nodes "$NODE" --endpoints "$NODE" --image "$IMAGE" --preserve --wait=false --talosconfig "$TALOSCONFIG"
 
         echo "Waiting for $NODE to come back up on $TARGET"
         UP=""
         for i in $(seq 1 90); do
           sleep 10
-          ACTUAL=$(talosctl version --nodes "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
+          ACTUAL=$(talosctl version --nodes "$NODE" --endpoints "$NODE" --talosconfig "$TALOSCONFIG" --short 2>/dev/null \
             | awk '/^Server:/{found=1} found && /Tag:/{print $2; exit}' || echo "")
           if [ "$ACTUAL" = "$TARGET" ]; then
             UP="1"
