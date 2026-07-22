@@ -33,8 +33,8 @@ locals {
     local.control_plane_nodes[local.first_control_plane_name].ip
   )
 
-  # provider-id identifies the node to a cloud controller manager (e.g.
-  # hcloud://<id> for Hetzner's CCM); irrelevant without one, e.g. on Proxmox.
+  # provider-id identifies the node to a cloud controller manager - any of
+  # them, not just Hetzner's (hcloud://<id>); irrelevant without one, e.g. on Proxmox.
   #
   # register-with-taints is for dedicated worker pools and applies everywhere.
   # NodeRestriction forbids a kubelet from changing its own node's taints
@@ -61,7 +61,8 @@ locals {
     for name, node in var.nodes : name => concat(
       [
         templatefile("${path.module}/templates/machine-config/common.yaml.tftpl", {
-          node_name           = coalesce(node.zone, name)
+          hostname            = name
+          zone                = coalesce(node.zone, name)
           region              = var.cluster.region
           k8s_version         = node.k8s_version
           installer_image_url = node.installer_image_url
