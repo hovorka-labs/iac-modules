@@ -62,10 +62,13 @@ locals {
   talos_nodes = {
     for name, node in var.nodes : name => {
       machine_type = node.role
-      node_name    = node.proxmox_node
-      ip           = split("/", node.ip)[0]
-      subnet_mask  = split("/", node.ip)[1]
-      gateway      = var.network_gateway
+      # Proxmox CSI/CCM call the Proxmox API using this zone value directly
+      # as the node name, so it has to be the real Proxmox node, not this
+      # node's own identity in the nodes map.
+      zone        = node.proxmox_node
+      ip          = split("/", node.ip)[0]
+      subnet_mask = split("/", node.ip)[1]
+      gateway     = var.network_gateway
 
       mac_address         = module.vms.mac_addresses[name]
       installer_image_url = module.talos_image.installer_image

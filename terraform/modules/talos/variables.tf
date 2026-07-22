@@ -37,6 +37,13 @@ variable "nodes" {
     k8s_version         = string
     apply_mode          = optional(string, "auto")
 
+    # topology.kubernetes.io/zone label - defaults to the map key, but some
+    # cloud integrations (e.g. Proxmox CSI/CCM) call the underlying provider
+    # API using this value directly as a node identifier, so it has to match
+    # the provider's own node name rather than whatever this node is called
+    # in the nodes map.
+    zone = optional(string)
+
     provider_id = optional(string) # Cloud controller manager node ID, e.g. hcloud://12345 on Hetzner; leave unset on Proxmox
     node_labels = optional(map(string), {})
 

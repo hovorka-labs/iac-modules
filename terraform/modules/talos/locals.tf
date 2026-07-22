@@ -61,7 +61,7 @@ locals {
     for name, node in var.nodes : name => concat(
       [
         templatefile("${path.module}/templates/machine-config/common.yaml.tftpl", {
-          node_name           = name
+          node_name           = coalesce(node.zone, name)
           region              = var.cluster.region
           k8s_version         = node.k8s_version
           installer_image_url = node.installer_image_url
