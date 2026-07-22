@@ -49,7 +49,7 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 - **`zone`** defaults to the node's own map key, but override it to the real Proxmox node name if you're running Proxmox CSI or CCM - both call the Proxmox API using `topology.kubernetes.io/zone` directly as a node name.
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
-- **Upgrades** (`terraform_data.upgrade`) and **control plane config application** (`terraform_data.control_plane_config_apply`) both go through `talosctl` directly, one node at a time, gated on etcd reporting healthy before moving to the next - concurrent control-plane restarts risk etcd's quorum. Workers apply config through the native `talos_machine_configuration_apply` resource instead, since restarting a worker's kubelet doesn't carry the same risk.
+- **Upgrades** (`terraform_data.upgrade`) are the only sequenced, health-gated operation - one node at a time, through `talosctl` directly, gated on etcd reporting healthy before moving to the next, since concurrent control-plane reboots risk etcd's quorum. Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive.
 - **`recreation_hash`** feeds a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines) - reapply a node's config, or redo the first control plane's bootstrap, by bumping one value.
 
 <!-- BEGIN_TF_DOCS -->
@@ -77,7 +77,6 @@ No modules.
 | [talos_machine_configuration_apply.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_configuration_apply) | resource |
 | [talos_machine_secrets.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_secrets) | resource |
 | [terraform_data.bootstrap_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.control_plane_config_apply](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.upgrade](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [talos_client_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/client_configuration) | data source |
 | [talos_cluster_health.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/cluster_health) | data source |
