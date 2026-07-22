@@ -8,6 +8,7 @@ output "kubeconfig" {
   description = "Kubernetes configuration for kubectl"
   value       = talos_cluster_kubeconfig.this.kubeconfig_raw
   sensitive   = true
+  depends_on  = [terraform_data.kubernetes_reachable]
 }
 
 output "machine_configs" {
