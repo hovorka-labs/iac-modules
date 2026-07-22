@@ -8,7 +8,7 @@ Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders 
 
 ```hcl
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.1.3"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.1.4"
 
   cluster = {
     name                 = "hub"
