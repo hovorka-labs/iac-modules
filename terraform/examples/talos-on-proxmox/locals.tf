@@ -79,9 +79,11 @@ locals {
       installer_image_url = module.talos_image.installer_image
       k8s_version         = var.k8s_version
 
-      # Ties Talos config re-application to the same MAC used for network
-      # matching above: if the VM is ever rebuilt with a new MAC, this
-      # value changes too, and the config gets reapplied to match.
+      # Only actually matters on the first control plane node in the nodes
+      # map: ties a cluster re-bootstrap to the same MAC used for network
+      # matching above, so if that node's VM is ever rebuilt with a new
+      # MAC, the cluster bootstrap redoes itself to match. No effect on
+      # any other node - harmless to set everywhere for consistency.
       recreation_hash = module.vms.mac_addresses[name]
     }
   }

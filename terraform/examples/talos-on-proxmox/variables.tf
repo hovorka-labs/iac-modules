@@ -16,9 +16,9 @@ variable "proxmox_insecure" {
 }
 
 variable "talos_version" {
-  description = "Talos OS version to deploy (e.g., v1.9.5)"
+  description = "Talos OS version to deploy (e.g., v1.13.7) - must be >= v1.12, since the talos module always patches a HostnameConfig document that older versions don't recognize"
   type        = string
-  default     = "v1.9.5"
+  default     = "v1.13.7"
 }
 
 variable "proxmox_nodes" {

@@ -2,6 +2,8 @@
 
 Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Also drives in-place `talosctl upgrade`s when a node's installer image changes.
 
+**Requires Talos >= 1.12.** Every node's machine config always includes a `HostnameConfig` document, which older Talos versions don't recognize and will reject outright.
+
 ## Example
 
 ```hcl
@@ -50,7 +52,7 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
 - **Upgrades** (`terraform_data.upgrade`) are the only sequenced, health-gated operation - one node at a time, through `talosctl` directly, gated on etcd reporting healthy before moving to the next, since concurrent control-plane reboots risk etcd's quorum. Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive.
-- **`recreation_hash`** feeds a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines) - reapply a node's config, or redo the first control plane's bootstrap, by bumping one value.
+- **`recreation_hash`** only matters on the first control plane node (whichever one happens to come first in the `nodes` map): it feeds `bootstrap_trigger`, a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines) - bump it to redo the cluster bootstrap without needing an unrelated argument to change first, e.g. after that node's underlying VM gets rebuilt. It's a no-op on every other node; ordinary config reapplication just relies on the rendered config content itself changing.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -86,7 +88,7 @@ No modules.
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
 | <a name="input_cluster"></a> [cluster](#input\_cluster) | Cluster-wide configuration shared by every node | n/a | yes |
-| <a name="input_nodes"></a> [nodes](#input\_nodes) | Map of nodes to configure. The map key is used as the node's topology zone label. | n/a | yes |
+| <a name="input_nodes"></a> [nodes](#input\_nodes) | Map of nodes to configure. The map key is used as the node's identity (hostname, topology zone label unless overridden by zone). | n/a | yes |
 ## Outputs
 
 | Name | Description |

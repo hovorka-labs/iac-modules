@@ -21,7 +21,7 @@ variable "cluster" {
 }
 
 variable "nodes" {
-  description = "Map of nodes to configure. The map key is used as the node's topology zone label."
+  description = "Map of nodes to configure. The map key is used as the node's identity (hostname, topology zone label unless overridden by zone)."
   type = map(object({
     machine_type = string # controlplane or worker
     ip           = string
@@ -52,8 +52,11 @@ variable "nodes" {
     # blocks setting taints on a worker any other way after it has registered.
     node_taints = optional(map(string), {})
 
-    # Bump to force the machine configuration to be reapplied without changing
-    # any other argument, e.g. after the underlying VM has been rebuilt.
+    # Only has an effect on the first control plane node (whichever one
+    # happens to come first in the nodes map): bump it to force the cluster
+    # bootstrap to redo, without changing any other argument, e.g. after
+    # that node's underlying VM has been rebuilt. No effect on any other
+    # node - see bootstrap_trigger in main.tf.
     recreation_hash = optional(string)
   }))
 
