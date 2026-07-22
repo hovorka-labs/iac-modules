@@ -1,12 +1,3 @@
-# Forces a node's machine configuration to be reapplied on demand, without
-# depending on an unrelated config change to trigger it.
-resource "terraform_data" "config_trigger" {
-  for_each = var.nodes
-  input = {
-    hash = try(each.value.recreation_hash, "default")
-  }
-}
-
 resource "talos_machine_secrets" "this" {}
 
 data "talos_client_configuration" "this" {
@@ -38,10 +29,6 @@ resource "talos_machine_configuration_apply" "this" {
   apply_mode                  = each.value.apply_mode
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
-
-  lifecycle {
-    replace_triggered_by = [terraform_data.config_trigger[each.key]]
-  }
 }
 
 # Control plane config apply, one node at a time - any machine config change
@@ -172,7 +159,7 @@ resource "terraform_data" "control_plane_config_apply" {
 # Re-bootstrap only when the first control plane node itself gets rebuilt,
 # not on every unrelated config change.
 resource "terraform_data" "bootstrap_trigger" {
-  input = terraform_data.config_trigger[local.first_control_plane_name].output
+  input = try(var.nodes[local.first_control_plane_name].recreation_hash, "default")
 }
 
 resource "talos_machine_bootstrap" "this" {
