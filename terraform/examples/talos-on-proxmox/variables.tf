@@ -36,9 +36,11 @@ variable "proxmox_datastore" {
 variable "nodes" {
   description = "Talos nodes to provision as Proxmox VMs, keyed by node name"
   type = map(object({
-    role         = string # "controlplane" or "worker"
+    # "controlplane" or "worker"
+    role         = string
     proxmox_node = string
-    ip           = string # CIDR, e.g. "192.168.1.10/24"
+    # CIDR, e.g. "192.168.1.10/24"
+    ip = string
   }))
 }
 

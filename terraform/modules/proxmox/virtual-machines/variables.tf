@@ -29,7 +29,8 @@ variable "virtual_machines" {
 
     memory = object({
       dedicated = number
-      floating  = optional(number) # enables memory ballooning
+      # enables memory ballooning
+      floating = optional(number)
     })
 
     network_devices = optional(list(object({
@@ -49,7 +50,8 @@ variable "virtual_machines" {
       ssd          = optional(bool)
       file_format  = optional(string)
       size         = number
-      file_id      = optional(string) # source image/template to clone from
+      # source image/template to clone from
+      file_id = optional(string)
     })))
 
     # Defaults to ide3: ide2 is reserved for the cloud-init drive below.

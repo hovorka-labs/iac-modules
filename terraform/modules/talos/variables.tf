@@ -1,13 +1,17 @@
 variable "cluster" {
   description = "Cluster-wide configuration shared by every node"
   type = object({
-    name     = string           # Talos cluster name, used for cluster registration and the generated client/kubeconfig
-    region   = string           # Applied to every node as the topology.kubernetes.io/region label
-    endpoint = optional(string) # Explicit cluster endpoint (host[:port]); overrides vip and the first control plane node's IP
+    # Talos cluster name, used for cluster registration and the generated client/kubeconfig
+    name = string
+    # Applied to every node as the topology.kubernetes.io/region label
+    region = string
+    # Explicit cluster endpoint (host[:port]); overrides vip and the first control plane node's IP
+    endpoint = optional(string)
 
-    vip                               = optional(string)
-    api_server_extra_sans             = optional(list(string), [])
-    api_server_config                 = optional(string, "") # Extra YAML merged into the apiServer block, e.g. extraArgs for OIDC
+    vip                   = optional(string)
+    api_server_extra_sans = optional(list(string), [])
+    # Extra YAML merged into the apiServer block, e.g. extraArgs for OIDC
+    api_server_config                 = optional(string, "")
     allow_scheduling_on_controlplanes = optional(bool, false)
     external_cloud_provider           = optional(bool, false)
     disable_kube_proxy                = optional(bool, false)
@@ -23,9 +27,11 @@ variable "cluster" {
 variable "nodes" {
   description = "Map of nodes to configure. The map key is used as the node's identity (hostname, topology zone label unless overridden by zone)."
   type = map(object({
-    machine_type = string # controlplane or worker
+    # controlplane or worker
+    machine_type = string
     ip           = string
-    talos_api_ip = optional(string) # Reach the Talos API here instead of ip, e.g. when ip is a private address behind a public one (Hetzner)
+    # Reach the Talos API here instead of ip, e.g. when ip is a private address behind a public one (tested on Hetzner)
+    talos_api_ip = optional(string)
 
     mac_address    = optional(string, "")
     interface_name = optional(string, "")
@@ -36,7 +42,8 @@ variable "nodes" {
     installer_image_url = string
     k8s_version         = string
 
-    apply_mode = optional(string, "auto") # auto applies immediately and reboots if needed; staged/no_reboot/reboot are also valid, see the talos_machine_configuration_apply docs
+    # auto applies immediately and reboots if needed; staged/no_reboot/reboot are also valid, see the talos_machine_configuration_apply docs
+    apply_mode = optional(string, "auto")
 
     # topology.kubernetes.io/zone label - defaults to the map key, but some
     # cloud integrations (e.g. Proxmox CSI/CCM) call the underlying provider
@@ -45,7 +52,8 @@ variable "nodes" {
     # in the nodes map.
     zone = optional(string)
 
-    provider_id = optional(string) # Cloud controller manager node ID, e.g. hcloud://12345 on Hetzner, openstack:///<uuid> on OpenStack; leave unset on Proxmox, which has no CCM
+    # Cloud controller manager node ID, e.g. hcloud://12345 on Hetzner, openstack:///<uuid> on OpenStack; leave unset on Proxmox, which has no CCM
+    provider_id = optional(string)
     node_labels = optional(map(string), {})
 
     # kubelet --register-with-taints, as { key = "value:Effect" }. NodeRestriction
