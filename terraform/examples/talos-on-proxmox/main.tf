@@ -30,7 +30,7 @@ module "talos_image" {
 # The static IP comes from cloud-init, which the nocloud platform picks up
 # before Talos even has a machine config to work from.
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.0.2"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=proxmox-virtual-machines-v1.1.0"
 
   virtual_machines = local.virtual_machines
 }
@@ -47,7 +47,7 @@ module "vms" {
 # Future step (covered in the next blog post): install Cilium. Without a
 # CNI, nodes come up but nothing can actually schedule yet.
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.2.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.3.0"
 
   cluster = {
     name                = var.talos_cluster_name
