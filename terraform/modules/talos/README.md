@@ -1,6 +1,6 @@
 # talos
 
-Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Also drives in-place `talosctl upgrade`s when a node's installer image changes.
+Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Talos OS upgrades are handled separately, by `scripts/upgrade-talos.sh` - see below.
 
 **Requires Talos >= 1.12.** Every node's machine config always includes a `HostnameConfig` document, which older Talos versions don't recognize and will reject outright.
 
@@ -51,8 +51,16 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 - **`zone`** defaults to the node's own map key, but override it to the real Proxmox node name if you're running Proxmox CSI or CCM - both call the Proxmox API using `topology.kubernetes.io/zone` directly as a node name.
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
-- **Upgrades** (`terraform_data.upgrade`) are the only sequenced, health-gated operation - one node at a time, through `talosctl` directly, gated on etcd reporting healthy before moving to the next, since concurrent control-plane reboots risk etcd's quorum. Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive.
+- **Upgrades don't happen through Terraform.** Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive. A Talos OS upgrade is a different animal (multi-minute, multi-node, needs to go one at a time), and a `local-exec` provisioner inside a Terraform resource turned out to be the wrong place to run it - see [Upgrading](#upgrading) below.
 - **`recreation_hash`** only matters on the first control plane node (whichever one happens to come first in the `nodes` map): it feeds `bootstrap_trigger`, a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines) - bump it to redo the cluster bootstrap without needing an unrelated argument to change first, e.g. after that node's underlying VM gets rebuilt. It's a no-op on every other node; ordinary config reapplication just relies on the rendered config content itself changing.
+
+## Upgrading
+
+Bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this only updates the *declared* image, it doesn't touch the running OS. Then, from the same directory, run `scripts/upgrade-talos.sh` (fetched alongside the rest of this module - find it under `.terraform/modules/<name>/terraform/modules/talos/scripts/upgrade-talos.sh`) to actually roll the upgrade out: it reads each node's target image from the module's `nodes` output, snapshots etcd, and upgrades one node at a time, gated on Talos *and* Kubernetes health between each. Requires `talosctl`, `kubectl`, `jq`, and `tofu` on your PATH.
+
+```
+./upgrade-talos.sh [cluster-dir]   # cluster-dir defaults to the current directory
+```
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -79,7 +87,6 @@ No modules.
 | [talos_machine_configuration_apply.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_configuration_apply) | resource |
 | [talos_machine_secrets.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_secrets) | resource |
 | [terraform_data.bootstrap_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.upgrade](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [talos_client_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/client_configuration) | data source |
 | [talos_cluster_health.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/cluster_health) | data source |
 | [talos_machine_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/machine_configuration) | data source |
@@ -95,5 +102,6 @@ No modules.
 | ---- | ----------- |
 | <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubernetes configuration for kubectl |
 | <a name="output_machine_configs"></a> [machine\_configs](#output\_machine\_configs) | Generated machine configuration for each node |
+| <a name="output_nodes"></a> [nodes](#output\_nodes) | Per-node Talos API endpoint, role, and target installer image - consumed by scripts/upgrade-talos.sh |
 | <a name="output_talosconfig"></a> [talosconfig](#output\_talosconfig) | Talos client configuration for talosctl |
 <!-- END_TF_DOCS -->

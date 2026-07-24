@@ -17,3 +17,14 @@ output "machine_configs" {
   }
   sensitive = true
 }
+
+output "nodes" {
+  description = "Per-node Talos API endpoint, role, and target installer image - consumed by scripts/upgrade-talos.sh"
+  value = {
+    for name, node in var.nodes : name => {
+      talos_api_ip        = local.talos_api_ips[name]
+      machine_type        = node.machine_type
+      installer_image_url = node.installer_image_url
+    }
+  }
+}
