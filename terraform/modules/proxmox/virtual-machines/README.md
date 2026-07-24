@@ -1,6 +1,6 @@
 # proxmox/virtual-machines
 
-Creates and manages Proxmox VMs from a single map variable, covering the common cases in this homelab: cloud-init provisioning, cloning from a template, PCI/GPU passthrough, and forcing a rebuild on demand.
+Creates and manages Proxmox VMs from a single map variable, covering the common cases in this homelab: cloud-init provisioning, cloning from a template, and PCI/GPU passthrough.
 
 ## Example
 
@@ -48,7 +48,6 @@ module "vms" {
 
 A couple of things here exist because of problems hit in practice, not because the provider needed it:
 
-- **`recreation_hash`** feeds a `terraform_data` resource wired up via `replace_triggered_by`. It lets a VM be recreated (re-cloned, re-initialized, etc.) by bumping one value, without needing an unrelated argument to change first.
 - **`cdrom` defaults to `ide3`**, because Proxmox always attaches the cloud-init drive on `ide2` — reusing it would silently break cloud-init.
 - **`clone.retries`** exists because cloning a template under load on this cluster occasionally fails transiently; a couple of retries is cheaper than debugging it.
 - **`cpu.type` has no default** - it's passed straight to the provider, which falls back to its own default (`qemu64`) if you don't set one. That default is a deliberately conservative, feature-poor virtual CPU model for cross-host migration compatibility, and it can be missing instruction sets a modern kernel expects - Talos VMs left on it can fail to boot in a way that looks like a Proxmox or networking problem, not a CPU one. Set it explicitly (`host` is usually the right call unless you need migration compatibility across mismatched hardware).
@@ -65,7 +64,6 @@ A couple of things here exist because of problems hit in practice, not because t
 | Name | Version |
 | ---- | ------- |
 | <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.111.1 |
-| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 ## Modules
 
 No modules.
@@ -74,7 +72,6 @@ No modules.
 | Name | Type |
 | ---- | ---- |
 | [proxmox_virtual_environment_vm.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
-| [terraform_data.vm_recreate_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 ## Inputs
 
 | Name | Description | Default | Required |

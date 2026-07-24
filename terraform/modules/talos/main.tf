@@ -34,12 +34,6 @@ resource "talos_machine_configuration_apply" "this" {
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
 }
 
-# Re-bootstrap only when the first control plane node itself gets rebuilt,
-# not on every unrelated config change.
-resource "terraform_data" "bootstrap_trigger" {
-  input = try(var.nodes[local.first_control_plane_name].recreation_hash, "default")
-}
-
 resource "talos_machine_bootstrap" "this" {
   depends_on = [
     talos_machine_configuration_apply.this,
@@ -47,10 +41,6 @@ resource "talos_machine_bootstrap" "this" {
 
   node                 = local.first_control_plane_api_ip
   client_configuration = talos_machine_secrets.this.client_configuration
-
-  lifecycle {
-    replace_triggered_by = [terraform_data.bootstrap_trigger]
-  }
 }
 
 data "talos_cluster_health" "this" {

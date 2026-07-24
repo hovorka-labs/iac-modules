@@ -7,10 +7,6 @@ variable "virtual_machines" {
     tags        = optional(list(string))
     on_boot     = optional(bool)
 
-    # Forces recreation of the VM on demand, without depending on any other
-    # argument changing. See `terraform_data.vm_recreate_trigger` in main.tf.
-    recreation_hash = optional(string)
-
     machine       = optional(string)
     scsi_hardware = optional(string)
     bios          = optional(string)

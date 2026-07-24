@@ -1,12 +1,3 @@
-# Lets a VM be recreated on demand (e.g. after rebuilding the image it was
-# cloned from) without depending on a real config change to trigger it.
-resource "terraform_data" "vm_recreate_trigger" {
-  for_each = var.virtual_machines
-  input = {
-    hash = try(each.value.recreation_hash, "default")
-  }
-}
-
 resource "proxmox_virtual_environment_vm" "this" {
   for_each = var.virtual_machines
 
@@ -137,9 +128,5 @@ resource "proxmox_virtual_environment_vm" "this" {
       rombar  = try(hostpci.value.rombar, false)
       xvga    = try(hostpci.value.xvga, false)
     }
-  }
-
-  lifecycle {
-    replace_triggered_by = [terraform_data.vm_recreate_trigger[each.key]]
   }
 }

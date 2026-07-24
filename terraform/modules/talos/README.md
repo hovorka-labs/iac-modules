@@ -52,7 +52,6 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
 - **Upgrades don't happen through Terraform.** Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive. A Talos OS upgrade is a different animal (multi-minute, multi-node, needs to go one at a time), and a `local-exec` provisioner inside a Terraform resource turned out to be the wrong place to run it - see [Upgrading](#upgrading) below.
-- **`recreation_hash`** only matters on the first control plane node (whichever one happens to come first in the `nodes` map): it feeds `bootstrap_trigger`, a `terraform_data` resource wired up via `replace_triggered_by`, the same pattern as [proxmox/virtual-machines](../proxmox/virtual-machines) - bump it to redo the cluster bootstrap without needing an unrelated argument to change first, e.g. after that node's underlying VM gets rebuilt. It's a no-op on every other node; ordinary config reapplication just relies on the rendered config content itself changing.
 
 ## Upgrading
 
@@ -74,7 +73,6 @@ Bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this 
 | Name | Version |
 | ---- | ------- |
 | <a name="provider_talos"></a> [talos](#provider\_talos) | 0.11.0 |
-| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 ## Modules
 
 No modules.
@@ -86,7 +84,6 @@ No modules.
 | [talos_machine_bootstrap.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_bootstrap) | resource |
 | [talos_machine_configuration_apply.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_configuration_apply) | resource |
 | [talos_machine_secrets.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/resources/machine_secrets) | resource |
-| [terraform_data.bootstrap_trigger](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [talos_client_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/client_configuration) | data source |
 | [talos_cluster_health.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/cluster_health) | data source |
 | [talos_machine_configuration.this](https://registry.terraform.io/providers/siderolabs/talos/latest/docs/data-sources/machine_configuration) | data source |

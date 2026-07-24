@@ -59,13 +59,6 @@ variable "nodes" {
     # kubelet --register-with-taints, as { key = "value:Effect" }. NodeRestriction
     # blocks setting taints on a worker any other way after it has registered.
     node_taints = optional(map(string), {})
-
-    # Only has an effect on the first control plane node (whichever one
-    # happens to come first in the nodes map): bump it to force the cluster
-    # bootstrap to redo, without changing any other argument, e.g. after
-    # that node's underlying VM has been rebuilt. No effect on any other
-    # node - see bootstrap_trigger in main.tf.
-    recreation_hash = optional(string)
   }))
 
   validation {
