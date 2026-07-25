@@ -3,11 +3,11 @@
 # Rolling Talos OS upgrade for a cluster built with this module.
 #
 # This deliberately doesn't live inside Terraform as a local-exec
-# provisioner (which is how earlier versions of this module did it). An
-# upgrade is a multi-minute, multi-node procedure - snapshot etcd, then one
-# node at a time, health-gated between each - and a `tofu apply` running
-# that isn't a safe place for it: an interrupted apply mid-upgrade leaves
-# you guessing what state a node is in, with no clean way to resume.
+# provisioner. An upgrade is a multi-minute, multi-node procedure -
+# snapshot etcd, then one node at a time, health-gated between each - and
+# a `tofu apply` running that isn't a safe place for it: an interrupted
+# apply mid-upgrade leaves you guessing what state a node is in, with no
+# clean way to resume.
 # Terraform still owns declaring each node's target installer_image_url
 # (see the `nodes` module output); this script reads that declared state
 # and reconciles the real cluster to match it, outside Terraform's
