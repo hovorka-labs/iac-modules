@@ -51,7 +51,7 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 - **`zone`** defaults to the node's own map key, but override it to the real Proxmox node name if you're running Proxmox CSI or CCM - both call the Proxmox API using `topology.kubernetes.io/zone` directly as a node name.
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
 - **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
-- **Upgrades don't happen through Terraform.** Ordinary config changes (`talos_machine_configuration_apply`) are unsequenced across every node, control planes included - a deliberate simplification that trusts the operator to know what a given change does, rather than treating every config apply as potentially disruptive. A Talos OS upgrade is a different animal: multi-minute, multi-node, and it needs to go one node at a time, which doesn't fit inside a single Terraform resource - see [Upgrading](#upgrading) below for how it's actually handled.
+- **Upgrades don't happen through Terraform.** A Talos OS upgrade is multi-minute, multi-node, and needs to go one node at a time, which doesn't fit inside a single Terraform resource - see [Upgrading](#upgrading) below for how it's actually handled.
 
 ## Upgrading
 
