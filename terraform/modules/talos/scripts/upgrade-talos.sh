@@ -193,13 +193,6 @@ while IFS='|' read -r NAME ROLE IP IMAGE; do
   K8S_NODE=$(k8s_node_name_for_ip "$IP" || true)
 
   log "-- talosctl upgrade: $CURRENT -> $TARGET"
-  # --wait blocks until Talos reports the node back and healthy. The
-  # in-Terraform version of this script avoided --wait because it also had
-  # to run at cold bootstrap, before any CNI exists, and --wait wound up
-  # stuck on Kubernetes' nodeReady, which never comes without one. That
-  # constraint doesn't apply here: this script only ever runs against an
-  # already-running cluster, so there's no reason to hand-roll polling
-  # instead of just using the flag that already does this.
   talosctl --endpoints "$IP" --nodes "$IP" upgrade --image "$IMAGE" --preserve --wait \
     || die "upgrade failed on $NAME ($IP) -- it may be in a partial state, investigate before continuing"
 
