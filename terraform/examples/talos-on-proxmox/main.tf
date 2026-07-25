@@ -7,7 +7,7 @@
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.0.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.0.1"
 
   talos_image_version  = var.talos_version
   talos_image_platform = "nocloud"
@@ -47,7 +47,7 @@ module "vms" {
 # Future step (covered in the next blog post): install Cilium. Without a
 # CNI, nodes come up but nothing can actually schedule yet.
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.3.5"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=talos-v1.4.0"
 
   cluster = {
     name                = var.talos_cluster_name
