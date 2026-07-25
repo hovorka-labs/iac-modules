@@ -56,8 +56,7 @@ variable "nodes" {
     provider_id = optional(string)
     node_labels = optional(map(string), {})
 
-    # kubelet --register-with-taints, as { key = "value:Effect" }. NodeRestriction
-    # blocks setting taints on a worker any other way after it has registered.
+    # Applied via a machine.nodeTaints patch, as { key = "value:Effect" }.
     node_taints = optional(map(string), {})
   }))
 

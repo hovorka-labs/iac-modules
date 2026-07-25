@@ -2,8 +2,6 @@
 
 Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Talos OS upgrades are handled separately, by `scripts/upgrade-talos.sh` - see below.
 
-**Requires Talos >= 1.12.** Every node's machine config always includes a `HostnameConfig` document, which older Talos versions don't recognize and will reject outright.
-
 ## Example
 
 ```hcl
@@ -50,7 +48,6 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 
 - **`zone`** defaults to the node's own map key, but override it to the real Proxmox node name if you're running Proxmox CSI or CCM - both call the Proxmox API using `topology.kubernetes.io/zone` directly as a node name.
 - **`vip` vs `endpoint`.** `cluster.endpoint` pins the cluster endpoint explicitly; otherwise it falls back to `cluster.vip`, then the first control plane's own IP.
-- **`node_taints`** registers taints via kubelet's `--register-with-taints` rather than a `machine.nodeTaints` patch - NodeRestriction rejects the latter once a worker has registered.
 - **Upgrades don't happen through Terraform.** A Talos OS upgrade is multi-minute, multi-node, and needs to go one node at a time, which doesn't fit inside a single Terraform resource - see [Upgrading](#upgrading) below for how it's actually handled.
 
 ## Upgrading

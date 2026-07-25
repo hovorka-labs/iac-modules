@@ -25,17 +25,9 @@ locals {
 
   # provider-id identifies the node to a cloud controller manager - any of
   # them, not just Hetzner's (hcloud://<id>); irrelevant without one, e.g. on Proxmox.
-  #
-  # register-with-taints is for dedicated worker pools and applies everywhere.
-  # NodeRestriction forbids a kubelet from changing its own node's taints
-  # after registration (a machine.nodeTaints patch gets rejected), so setting
-  # them at kubelet startup is the only mechanism that reliably works.
   kubelet_extra_args = {
-    for name, node in var.nodes : name => merge(
-      node.provider_id != null ? { "provider-id" = node.provider_id } : {},
-      length(node.node_taints) > 0 ? {
-        "register-with-taints" = join(",", [for k, v in node.node_taints : "${k}=${v}"])
-      } : {}
+    for name, node in var.nodes : name => (
+      node.provider_id != null ? { "provider-id" = node.provider_id } : {}
     )
   }
 
@@ -61,22 +53,6 @@ locals {
           pod_subnets         = var.cluster.pod_subnets
           service_subnets     = var.cluster.service_subnets
         }),
-        # A standalone HostnameConfig document (Talos >= 1.12's replacement
-        # for the legacy machine.network.hostname field, which now conflicts
-        # with it - Talos generates a HostnameConfig with auto: stable into
-        # every node's base config, and patching the legacy field on top of
-        # that gets rejected outright: "static hostname is already set in
-        # v1alpha1 config"). auto: off is required alongside hostname, not
-        # just the hostname value alone - it's what actually disables the
-        # generated auto config; explicit, rather than left to whatever the
-        # platform hands back, since some platforms (e.g. OpenStack via
-        # cloud-init) append their own suffix (".novalocal") otherwise.
-        yamlencode({
-          apiVersion = "v1alpha1"
-          kind       = "HostnameConfig"
-          hostname   = name
-          auto       = "off"
-        })
       ],
       length(local.kubelet_extra_args[name]) > 0 ? [
         yamlencode({
@@ -84,6 +60,13 @@ locals {
             kubelet = {
               extraArgs = local.kubelet_extra_args[name]
             }
+          }
+        })
+      ] : [],
+      length(node.node_taints) > 0 ? [
+        yamlencode({
+          machine = {
+            nodeTaints = node.node_taints
           }
         })
       ] : [],
