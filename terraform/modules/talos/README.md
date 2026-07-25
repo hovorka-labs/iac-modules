@@ -55,10 +55,10 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 
 ## Upgrading
 
-Bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this only updates the *declared* image, it doesn't touch the running OS. Then, from the same directory, run `scripts/upgrade-talos.sh` (fetched alongside the rest of this module - find it under `.terraform/modules/<name>/terraform/modules/talos/scripts/upgrade-talos.sh`) to actually roll the upgrade out: it reads each node's target image from the module's `nodes` output, snapshots etcd, and upgrades one node at a time, gated on Talos *and* Kubernetes health between each. Requires `talosctl`, `kubectl`, `jq`, and `tofu` on your PATH.
+Bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this only updates the *declared* image, it doesn't touch the running OS. Then, from the same directory, run `scripts/upgrade-talos.sh` (fetched alongside the rest of this module - find it under `.terraform/modules/<name>/terraform/modules/talos/scripts/upgrade-talos.sh`) to actually roll the upgrade out: it reads each node's target image from the module's `nodes` output, snapshots etcd, and upgrades one node at a time, gated on Talos *and* Kubernetes health between each. Requires `talosctl`, `kubectl`, `jq`, and `tofu` on your PATH; set `TALOSCTL=<path>` to use a specific `talosctl` binary instead of whatever's on PATH (useful when operating multiple clusters on different versions).
 
 ```
-./upgrade-talos.sh [cluster-dir]   # cluster-dir defaults to the current directory
+./upgrade-talos.sh <cluster-dir>   # required - the directory you'd normally run tofu apply from
 ```
 
 <!-- BEGIN_TF_DOCS -->
@@ -97,8 +97,10 @@ No modules.
 
 | Name | Description |
 | ---- | ----------- |
+| <a name="output_controlplane_ips"></a> [controlplane\_ips](#output\_controlplane\_ips) | Talos API IPs of every control plane node |
 | <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubernetes configuration for kubectl |
 | <a name="output_machine_configs"></a> [machine\_configs](#output\_machine\_configs) | Generated machine configuration for each node |
 | <a name="output_nodes"></a> [nodes](#output\_nodes) | Per-node Talos API endpoint, role, and target installer image - consumed by scripts/upgrade-talos.sh |
 | <a name="output_talosconfig"></a> [talosconfig](#output\_talosconfig) | Talos client configuration for talosctl |
+| <a name="output_worker_ips"></a> [worker\_ips](#output\_worker\_ips) | Talos API IPs of every worker node |
 <!-- END_TF_DOCS -->

@@ -13,31 +13,51 @@
 # and reconciles the real cluster to match it, outside Terraform's
 # execution model entirely.
 #
-# Usage: ./upgrade-talos.sh [cluster-dir]
-#   cluster-dir defaults to the current directory and must be where you'd
-#   normally run `tofu apply` for this cluster.
+# Usage: ./upgrade-talos.sh <cluster-dir>
+#   cluster-dir is required: the directory you'd normally run `tofu apply`
+#   from for this cluster. No default - the path you invoke this script BY
+#   is never that directory (it lives nested inside .terraform/modules/...),
+#   so guessing "current directory" would be more likely to be wrong than
+#   right.
 #
 # Env vars:
-#   AUTO_CONFIRM=1        skip the "proceed?" prompt after showing the plan
+#   TALOSCTL              talosctl binary to use (default: talosctl on PATH).
+#                          Override when operating multiple clusters/versions
+#                          at once - upgrade-k8s-style commands require the
+#                          client to be at least as new as the node's Talos
+#                          version, so an older PATH talosctl can fail checks
+#                          a newer one wouldn't.
+#   AUTO_CONFIRM=1        skip both confirmation prompts (declared-state and plan review)
 #   SLEEP_BETWEEN_NODES   seconds to pause between nodes (default 15)
 #   NODE_READY_TIMEOUT    kubectl wait timeout per node (default 300s)
 #   HEALTH_WAIT_TIMEOUT   talosctl health --wait-timeout (default 10m)
 
 set -euo pipefail
 
-CLUSTER_DIR="${1:-.}"
 AUTO_CONFIRM="${AUTO_CONFIRM:-0}"
 SLEEP_BETWEEN_NODES="${SLEEP_BETWEEN_NODES:-15}"
 NODE_READY_TIMEOUT="${NODE_READY_TIMEOUT:-300s}"
 HEALTH_WAIT_TIMEOUT="${HEALTH_WAIT_TIMEOUT:-10m}"
+TALOSCTL="${TALOSCTL:-talosctl}"
 
 log() { echo -e "\n[$(date +%H:%M:%S)] $*"; }
 die() { echo -e "\n!! $* -- aborting." >&2; exit 1; }
 
-for bin in talosctl kubectl jq tofu; do
+[[ -n "${1:-}" ]] || die "cluster-dir required (usage: $0 <cluster-dir>) -- the directory you'd normally run 'tofu apply' from for this cluster"
+CLUSTER_DIR="$1"
+
+for bin in "$TALOSCTL" kubectl jq tofu; do
   command -v "$bin" >/dev/null || die "$bin not found"
 done
 [[ -n "$(ls "$CLUSTER_DIR"/*.tf 2>/dev/null)" ]] || die "$CLUSTER_DIR has no .tf files"
+[[ "$TALOSCTL" != "talosctl" ]] && log "Using talosctl override: $TALOSCTL ($("$TALOSCTL" version --client --short 2>/dev/null | tail -1))"
+
+if [[ "$AUTO_CONFIRM" != "1" ]]; then
+  echo "This only rolls out what's already declared - it doesn't bump installer_image_url or run tofu apply for you."
+  read -r -p "Have you already set the target installer_image_url and run tofu apply for $CLUSTER_DIR? [y/N] " answer
+  echo
+  [[ "$answer" =~ ^[Yy]$ ]] || die "bump installer_image_url and tofu apply first, then rerun"
+fi
 
 tofu_raw()  { tofu -chdir="$CLUSTER_DIR" output -raw  "$1"; }
 tofu_json() { tofu -chdir="$CLUSTER_DIR" output -json "$1"; }
@@ -76,15 +96,16 @@ k8s_node_name_for_ip() {
 }
 
 current_tag() {
-  talosctl --endpoints "$1" --nodes "$1" version --short 2>/dev/null \
+  "$TALOSCTL" --endpoints "$1" --nodes "$1" version --short 2>/dev/null \
     | awk '/^Server:/{f=1; next} f && /Tag:/{print $2; exit}'
 }
 
-# The VIP is etcd-election based and drops out from under you while a
-# control plane leaves/rejoins etcd during its own upgrade, so kubectl is
-# always pointed at a real node instead -- specifically, any control plane
-# OTHER than the one currently being upgraded, so asking about cluster state
-# never depends on the one node that might be mid-reboot right now.
+# VIP reliability during a control-plane reboot varies by provider/network
+# setup - sometimes it fails over cleanly, sometimes it doesn't - so rather
+# than assume either way, kubectl is always pointed at a real node instead:
+# specifically, any control plane OTHER than the one currently being
+# upgraded, so asking about cluster state never depends on the one node
+# that might be mid-reboot right now.
 point_kubectl_away_from() {
   local avoid="$1" target="$FIRST_CP" cand
   for cand in "${CP_IPS[@]}"; do
@@ -107,7 +128,7 @@ wait_for_apiserver() {
 # talosctl health needs CP vs worker roles, or it expects every node to be
 # schedulable -- false for CP nodes carrying the default NoSchedule taint.
 health_check() {
-  talosctl --endpoints "$FIRST_CP" --nodes "$FIRST_CP" \
+  "$TALOSCTL" --endpoints "$FIRST_CP" --nodes "$FIRST_CP" \
     health --control-plane-nodes "$CP_CSV" ${WORKER_CSV:+--worker-nodes "$WORKER_CSV"} \
     --k8s-endpoint "$FIRST_CP" --wait-timeout "$1"
 }
@@ -118,7 +139,7 @@ health_check() {
 etcd_healthy() {
   local status ok="" i
   for i in $(seq 1 12); do
-    status=$(talosctl --endpoints "$FIRST_CP" --nodes "$CP_CSV" service etcd 2>&1 || true)
+    status=$("$TALOSCTL" --endpoints "$FIRST_CP" --nodes "$CP_CSV" service etcd 2>&1 || true)
     if echo "$status" | grep -q "^HEALTH" && ! echo "$status" | grep "^HEALTH" | grep -qv "OK$"; then
       ok="1"
       break
@@ -147,7 +168,7 @@ etcd_healthy || die "etcd is not healthy before starting -- fix this first"
 
 log "Taking etcd snapshot (rollback safety net)"
 mkdir -p "$CLUSTER_DIR/etcd-backup"
-talosctl --endpoints "$FIRST_CP" --nodes "$FIRST_CP" etcd snapshot \
+"$TALOSCTL" --endpoints "$FIRST_CP" --nodes "$FIRST_CP" etcd snapshot \
   "$CLUSTER_DIR/etcd-backup/pre-upgrade-$(date +%Y%m%d-%H%M%S).snapshot" \
   || die "etcd snapshot failed -- not proceeding without a rollback point"
 
@@ -193,7 +214,7 @@ while IFS='|' read -r NAME ROLE IP IMAGE; do
   K8S_NODE=$(k8s_node_name_for_ip "$IP" || true)
 
   log "-- talosctl upgrade: $CURRENT -> $TARGET"
-  talosctl --endpoints "$IP" --nodes "$IP" upgrade --image "$IMAGE" --preserve --wait \
+  "$TALOSCTL" --endpoints "$IP" --nodes "$IP" upgrade --image "$IMAGE" --preserve --wait \
     || die "upgrade failed on $NAME ($IP) -- it may be in a partial state, investigate before continuing"
 
   wait_for_apiserver 900 || die "API server did not come back within 15m after upgrading $NAME"

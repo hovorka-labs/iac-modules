@@ -1,11 +1,13 @@
 data "proxmox_virtual_environment_nodes" "this" {}
 
 locals {
-  # proxmox_download_file's default file_name (derived from the URL's last
-  # path segment) is the same for every Talos version and schematic, e.g.
-  # "nocloud-amd64.raw.xz" - fine on its own, but every image this module
-  # downloads would collide on that one name. An explicit name that embeds
-  # the version and schematic keeps each one distinct.
+  # proxmox_download_file's default file_name is derived from the URL's last
+  # path segment. The Image Factory encodes version and schematic earlier in
+  # the URL path, not in that final segment, so the default name is the same
+  # for every version/schematic of a given platform+arch - fine on its own,
+  # but every image this module downloads would then collide on that one
+  # name. An explicit name that embeds the version and schematic keeps each
+  # one distinct.
   file_name = "talos-${var.talos_image_version}-${talos_image_factory_schematic.this.id}-${var.talos_image_platform}.iso"
 }
 

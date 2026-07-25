@@ -28,3 +28,13 @@ output "nodes" {
     }
   }
 }
+
+output "controlplane_ips" {
+  description = "Talos API IPs of every control plane node"
+  value       = local.control_plane_ips
+}
+
+output "worker_ips" {
+  description = "Talos API IPs of every worker node"
+  value       = local.worker_ips
+}
