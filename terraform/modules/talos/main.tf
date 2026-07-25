@@ -17,14 +17,11 @@ data "talos_machine_configuration" "this" {
   config_patches   = local.node_config_patches[each.key]
 }
 
-# Applied unsequenced to every node, control planes included. An ordinary
-# config change can restart a control plane's kube-apiserver,
-# controller-manager, and scheduler, so applying to every control plane at
-# once isn't risk-free, but it's a deliberate simplification: the operator
-# is expected to know what a given change does before applying it. Talos OS
-# upgrades are different - always disruptive, since they reboot the node -
-# so those are sequenced and health-gated one node at a time instead, by
-# scripts/upgrade-talos.sh rather than by anything in this file.
+# Applied unsequenced to every node, control planes included. A config
+# change can restart a control plane's kube-apiserver, controller-manager,
+# and scheduler, so this isn't risk-free, but it's a deliberate
+# simplification: the operator is expected to know what a given change
+# does before applying it.
 resource "talos_machine_configuration_apply" "this" {
   for_each = var.nodes
 
