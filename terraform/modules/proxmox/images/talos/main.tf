@@ -9,6 +9,8 @@ locals {
   # name. An explicit name that embeds the version and schematic keeps each
   # one distinct.
   file_name = "talos-${var.talos_image_version}-${talos_image_factory_schematic.this.id}-${var.talos_image_platform}.iso"
+
+  target_nodes = var.proxmox_nodes != null ? var.proxmox_nodes : toset(data.proxmox_virtual_environment_nodes.this.names)
 }
 
 data "talos_image_factory_extensions_versions" "this" {
@@ -37,7 +39,7 @@ data "talos_image_factory_urls" "this" {
 }
 
 resource "proxmox_download_file" "this" {
-  for_each = var.proxmox_nodes != null ? var.proxmox_nodes : toset(data.proxmox_virtual_environment_nodes.this.names)
+  for_each = var.download_iso ? local.target_nodes : toset([])
 
   node_name           = each.key
   content_type        = "iso"

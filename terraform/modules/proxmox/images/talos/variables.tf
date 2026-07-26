@@ -30,3 +30,9 @@ variable "proxmox_datastore" {
   type        = string
   default     = "local"
 }
+
+variable "download_iso" {
+  description = "Whether to actually download the ISO to Proxmox. The ISO is only ever used as boot media the first time a VM starts - upgrades pull the installer image directly over the network and never touch it again - so set this to false when you only need `installer_image`/`schematic_id` (e.g. to declare a new upgrade target) and aren't provisioning a new VM."
+  type        = bool
+  default     = true
+}

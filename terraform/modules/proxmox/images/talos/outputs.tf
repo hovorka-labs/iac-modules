@@ -9,8 +9,8 @@ output "installer_image" {
 }
 
 output "image_nodes" {
-  description = "Map of Proxmox node name to the downloaded image's file_id, for use in a VM's disk or cdrom block"
+  description = "Map of Proxmox node name to the image's file_id, for use in a VM's disk or cdrom block. Valid whether or not download_iso actually downloaded it there - referencing it for a node that doesn't have the file (download_iso = false) fails at the Proxmox API when something tries to use it, not here."
   value = {
-    for node in keys(proxmox_download_file.this) : node => "${var.proxmox_datastore}:iso/${local.file_name}"
+    for node in local.target_nodes : node => "${var.proxmox_datastore}:iso/${local.file_name}"
   }
 }
