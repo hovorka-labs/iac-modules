@@ -27,15 +27,17 @@ module "talos_image" {
 
 This module doesn't download the ISO itself - it's boot media only needed the first time a VM starts (upgrades pull `installer_image` directly over the network and never touch it again), so tying its download to every `tofu apply` wastes bandwidth and Proxmox storage for versions that never provision a new VM.
 
-Instead, whenever you actually need a new VM to boot from this version, upload it once per Proxmox node yourself:
+Instead, whenever you actually need a new VM to boot from this version, tell Proxmox to fetch it once per node yourself, via the API's `download-url` endpoint (there's no `pvesm` subcommand for this - `pvesm upload` doesn't exist, this is the same action the "Download from URL" button in the web UI performs):
 
 ```bash
-name="$(tofu output -raw iso_file_name)"
-curl -fsSL "$(tofu output -raw iso_url)" -o "$name"
-pvesm upload <datastore> "$name" --content iso
+curl -k -H "Authorization: PVEAPIToken=<user>@<realm>!<token-id>=<secret>" \
+  -X POST "https://<proxmox-host>:8006/api2/json/nodes/<node>/storage/<datastore>/download-url" \
+  --data-urlencode "content=iso" \
+  --data-urlencode "filename=$(tofu output -raw iso_file_name)" \
+  --data-urlencode "url=$(tofu output -raw iso_url)"
 ```
 
-`image_nodes` assumes the file lands at that exact name on that datastore - reference it in a VM's `cdrom` block only after the upload above, or Proxmox will fail to attach it.
+This returns a task UPID immediately (Proxmox downloads it server-side); poll `/nodes/<node>/tasks/<upid>/status` if you want to confirm it finished before applying. `image_nodes` assumes the file lands at that exact name on that datastore - reference it in a VM's `cdrom` block only after the download above, or Proxmox will fail to attach it.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

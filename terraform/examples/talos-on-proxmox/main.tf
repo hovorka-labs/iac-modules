@@ -3,12 +3,15 @@
 # The module queries the Image Factory to build a schematic for the
 # requested extensions and returns the installer image URL plus the ISO
 # URL/expected file path - it doesn't download or upload anything itself.
-# Before running Step 2 for the first time, upload the ISO to each Proxmox
-# node yourself (see the module README):
+# Before running Step 2 for the first time, tell Proxmox to fetch the ISO
+# to each node yourself, via the API's download-url endpoint (see the
+# module README):
 #
-#   name="$(tofu output -raw iso_file_name)"
-#   curl -fsSL "$(tofu output -raw iso_url)" -o "$name"
-#   pvesm upload <datastore> "$name" --content iso
+#   curl -k -H "Authorization: PVEAPIToken=<user>@<realm>!<token-id>=<secret>" \
+#     -X POST "https://<proxmox-host>:8006/api2/json/nodes/<node>/storage/<datastore>/download-url" \
+#     --data-urlencode "content=iso" \
+#     --data-urlencode "filename=$(tofu output -raw iso_file_name)" \
+#     --data-urlencode "url=$(tofu output -raw iso_url)"
 #
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
