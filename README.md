@@ -50,7 +50,7 @@ Pin to a [release tag](https://github.com/hovorka-labs/iac-modules/tags) with `?
 Operational tooling that isn't Terraform - things like cluster upgrades, which are multi-step, multi-minute procedures that don't belong inside a `tofu apply`. One self-contained script per concern; get them straight from a tag, no need to go through a module:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.1.0/scripts/talos.sh -o talos.sh
+curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.1.1/scripts/talos.sh -o talos.sh
 chmod +x talos.sh
 ./talos.sh --help
 ```
