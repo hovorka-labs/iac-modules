@@ -6,8 +6,14 @@
 #
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
+#
+# download_iso defaults to true, which is what a fresh provisioning example
+# like this one wants - once nodes exist, that ISO is never touched again
+# (upgrades pull the installer image directly), so a real environment that's
+# just bumping the version to declare a new upgrade target, not adding a
+# node, would set it to false instead.
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.0.1"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.1.0"
 
   talos_image_version  = var.talos_version
   talos_image_platform = "nocloud"

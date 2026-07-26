@@ -12,7 +12,7 @@ provider "proxmox" {
 }
 
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.0.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.1.0"
 
   talos_image_version  = "v1.9.5"
   talos_image_platform = "metal"
