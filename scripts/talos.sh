@@ -30,7 +30,7 @@
 #   directory, so guessing would be more likely to be wrong than right.
 #
 # Get it:
-#   curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.0.0/scripts/talos.sh -o talos.sh
+#   curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.1.0/scripts/talos.sh -o talos.sh
 #   chmod +x talos.sh
 #
 # Env vars:

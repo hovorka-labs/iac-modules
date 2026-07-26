@@ -1,13 +1,13 @@
 data "proxmox_virtual_environment_nodes" "this" {}
 
 locals {
-  # proxmox_download_file's default file_name is derived from the URL's last
-  # path segment. The Image Factory encodes version and schematic earlier in
-  # the URL path, not in that final segment, so the default name is the same
-  # for every version/schematic of a given platform+arch - fine on its own,
-  # but every image this module downloads would then collide on that one
-  # name. An explicit name that embeds the version and schematic keeps each
-  # one distinct.
+  # The Image Factory's ISO URL ends in a fixed name that's the same for
+  # every version/schematic of a given platform+arch - it encodes those
+  # earlier in the path, not in the final segment. Deriving file_name from
+  # it directly would mean every version manually uploaded to the same
+  # datastore collides on one name. Embedding version and schematic here
+  # keeps each one distinct, and is what image_nodes/iso_file_name hand out
+  # for that manual upload.
   file_name = "talos-${var.talos_image_version}-${talos_image_factory_schematic.this.id}-${var.talos_image_platform}.iso"
 
   target_nodes = var.proxmox_nodes != null ? var.proxmox_nodes : toset(data.proxmox_virtual_environment_nodes.this.names)

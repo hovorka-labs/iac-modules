@@ -8,6 +8,16 @@ output "talos_installer_image" {
   value       = module.talos_image.installer_image
 }
 
+output "iso_url" {
+  description = "Talos Image Factory ISO URL — fetch and upload this to each Proxmox node before the first apply, see main.tf"
+  value       = module.talos_image.iso_url
+}
+
+output "iso_file_name" {
+  description = "File name to upload the ISO as — see main.tf"
+  value       = module.talos_image.iso_file_name
+}
+
 output "kubeconfig" {
   description = "Kubernetes configuration for kubectl"
   value       = module.talos_cluster.kubeconfig
