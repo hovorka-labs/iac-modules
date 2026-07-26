@@ -55,7 +55,7 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 Get `scripts/talos.sh` from the [repo root](../../../scripts) - it's not part of this module, since it's not Terraform and doesn't need to be fetched through a module source:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.0.0/scripts/talos.sh -o talos.sh
+curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.1.0/scripts/talos.sh -o talos.sh
 chmod +x talos.sh
 ```
 
