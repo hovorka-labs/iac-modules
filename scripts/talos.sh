@@ -94,6 +94,10 @@ current_talos_tag() {
     | awk '/^Server:/{f=1; next} f && /Tag:/{print $2; exit}'
 }
 
+current_k8s_version() {
+  kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}' 2>/dev/null
+}
+
 # VIP reliability during a control-plane reboot varies by provider/network
 # setup - sometimes it fails over cleanly, sometimes it doesn't - so rather
 # than assume either way, kubectl is always pointed at a real node instead:
@@ -302,6 +306,30 @@ cmd_upgrade_k8s() {
   [[ -n "${1:-}" && -n "${2:-}" ]] || die "usage: $0 upgrade-k8s <cluster-dir> <target-version>"
   setup_cluster_access "$1"
   local target="$2"
+
+  local current
+  current=$(current_k8s_version || echo "unknown")
+  log "Kubernetes: $current -> $target"
+
+  # Can't check whether k8s_version in Terraform has already been bumped -
+  # unlike installer_image_url, it isn't part of this module's own output
+  # surface, and the exact variable/local name is caller-specific, so there's
+  # nothing generic to grep. What IS generic: if the cluster is already
+  # reporting the target version, something's already happened here, whether
+  # that's this script running before, a manual upgrade, or Terraform having
+  # been applied out of order - worth a harder stop than the usual confirm.
+  if [[ "$current" == "$target" ]]; then
+    echo "!! Cluster is already reporting $target. If Terraform's k8s_version was bumped and applied before this ran, the order is backwards - upgrade-k8s is meant to run BEFORE that, not after. Re-running this now is harmless (upgrade-k8s is idempotent), but make sure that's actually what you want."
+    if [[ "$AUTO_CONFIRM" != "1" ]]; then
+      read -r -p "Proceed anyway? [y/N] " answer
+      echo
+      [[ "$answer" =~ ^[Yy]$ ]] || die "cancelled"
+    fi
+  elif [[ "$AUTO_CONFIRM" != "1" ]]; then
+    read -r -p "This expects k8s_version in Terraform to still be at the OLD version ($current) - confirm you haven't bumped and applied it yet. [y/N] " answer
+    echo
+    [[ "$answer" =~ ^[Yy]$ ]] || die "if you already bumped k8s_version in Terraform, reconcile that first (see tofu output), then rerun"
+  fi
 
   preflight
   take_etcd_snapshot "pre-k8s-upgrade"
