@@ -45,6 +45,20 @@ Pin to a [release tag](https://github.com/hovorka-labs/iac-modules/tags) with `?
 | [helm/actions-runner-controller](terraform/modules/helm/actions-runner-controller) | Deploy GitHub Actions Runner Controller |
 | [helm/actions-runner-deployment](terraform/modules/helm/actions-runner-deployment) | Deploy GitHub Actions Runner workloads |
 
+## Scripts
+
+Operational tooling that isn't Terraform - things like cluster upgrades, which are multi-step, multi-minute procedures that don't belong inside a `tofu apply`. One self-contained script per concern; get them straight from a tag, no need to go through a module:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.0.0/scripts/talos.sh -o talos.sh
+chmod +x talos.sh
+./talos.sh --help
+```
+
+| Script | What it does |
+|--------|--------------|
+| [scripts/talos.sh](scripts/talos.sh) | Talos OS and Kubernetes upgrades for a cluster built with the [talos](terraform/modules/talos) module |
+
 ## Ansible Roles
 
 *Coming soon* — roles will live under `ansible/roles/`.
