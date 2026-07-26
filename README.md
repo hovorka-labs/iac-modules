@@ -22,7 +22,7 @@ Pin to a [release tag](https://github.com/hovorka-labs/iac-modules/tags) with `?
 | Module | Description |
 |--------|-------------|
 | [proxmox/virtual-machines](terraform/modules/proxmox/virtual-machines) | Create and manage Proxmox VMs |
-| [proxmox/images/talos](terraform/modules/proxmox/images/talos) | Build and upload Talos Linux images with extensions |
+| [proxmox/images/talos](terraform/modules/proxmox/images/talos) | Look up Talos Linux images (installer/ISO URLs) from the Image Factory |
 | [proxmox/images/general](terraform/modules/proxmox/images/general) | Download generic images to Proxmox nodes |
 | [proxmox/users/role](terraform/modules/proxmox/users/role) | Manage Proxmox roles and privileges |
 | [proxmox/users/user](terraform/modules/proxmox/users/user) | Manage Proxmox users and ACLs |

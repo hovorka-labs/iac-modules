@@ -1,19 +1,19 @@
-# Step 1: Download Talos OS images to Proxmox nodes.
+# Step 1: Look up a Talos OS image from the Image Factory.
 #
-# The module queries the Talos Image Factory to build a schematic for the
-# requested extensions, then downloads the resulting ISO to every node so
-# VMs can be created from it regardless of which node they land on.
+# The module queries the Image Factory to build a schematic for the
+# requested extensions and returns the installer image URL plus the ISO
+# URL/expected file path - it doesn't download or upload anything itself.
+# Before running Step 2 for the first time, upload the ISO to each Proxmox
+# node yourself (see the module README):
+#
+#   name="$(tofu output -raw iso_file_name)"
+#   curl -fsSL "$(tofu output -raw iso_url)" -o "$name"
+#   pvesm upload <datastore> "$name" --content iso
 #
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
-#
-# download_iso defaults to true, which is what a fresh provisioning example
-# like this one wants - once nodes exist, that ISO is never touched again
-# (upgrades pull the installer image directly), so a real environment that's
-# just bumping the version to declare a new upgrade target, not adding a
-# node, would set it to false instead.
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.1.0"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/images/talos?ref=proxmox-talos-images-v1.2.0"
 
   talos_image_version  = var.talos_version
   talos_image_platform = "nocloud"
@@ -24,7 +24,7 @@ module "talos_image" {
     "siderolabs/qemu-guest-agent",
   ]
 
-  # Scope the download to specific nodes, or omit to target every node.
+  # Scope to specific nodes, or omit to target every node in the cluster.
   proxmox_nodes     = var.proxmox_nodes
   proxmox_datastore = var.proxmox_datastore
 }

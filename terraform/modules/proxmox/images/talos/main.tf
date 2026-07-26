@@ -37,16 +37,3 @@ data "talos_image_factory_urls" "this" {
   schematic_id  = talos_image_factory_schematic.this.id
   platform      = var.talos_image_platform
 }
-
-resource "proxmox_download_file" "this" {
-  for_each = var.download_iso ? local.target_nodes : toset([])
-
-  node_name           = each.key
-  content_type        = "iso"
-  datastore_id        = var.proxmox_datastore
-  overwrite_unmanaged = true
-  overwrite           = false
-
-  file_name = local.file_name
-  url       = data.talos_image_factory_urls.this.urls["iso"]
-}
