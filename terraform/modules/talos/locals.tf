@@ -5,7 +5,7 @@ locals {
 
   # Talos API endpoint per node — defaults to the cluster IP, but can be
   # overridden when it isn't directly reachable, e.g. a private IP behind a
-  # public one on Hetzner.
+  # public one on some cloud providers.
   talos_api_ips = {
     for name, node in var.nodes : name => coalesce(node.talos_api_ip, node.ip)
   }
@@ -23,8 +23,8 @@ locals {
     local.control_plane_nodes[local.first_control_plane_name].ip
   )
 
-  # provider-id identifies the node to a cloud controller manager - any of
-  # them, not just Hetzner's (hcloud://<id>); irrelevant without one, e.g. on Proxmox.
+  # provider-id identifies the node to a cloud controller manager - format is
+  # provider-specific; irrelevant without one, e.g. on Proxmox.
   kubelet_extra_args = {
     for name, node in var.nodes : name => (
       node.provider_id != null ? { "provider-id" = node.provider_id } : {}

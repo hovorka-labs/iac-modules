@@ -30,7 +30,7 @@ variable "nodes" {
     # controlplane or worker
     machine_type = string
     ip           = string
-    # Reach the Talos API here instead of ip, e.g. when ip is a private address behind a public one (tested on Hetzner)
+    # Reach the Talos API here instead of ip, e.g. when ip is a private address behind a public one
     talos_api_ip = optional(string)
 
     mac_address    = optional(string, "")
@@ -52,7 +52,7 @@ variable "nodes" {
     # in the nodes map.
     zone = optional(string)
 
-    # Cloud controller manager node ID, e.g. hcloud://12345 on Hetzner, openstack:///<uuid> on OpenStack; leave unset on Proxmox, which has no CCM
+    # Cloud controller manager node ID, in whatever URI format that CCM expects; leave unset on Proxmox, which has no CCM
     provider_id = optional(string)
     node_labels = optional(map(string), {})
 
