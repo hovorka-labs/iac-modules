@@ -1,6 +1,6 @@
 # talos
 
-Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Talos OS upgrades are handled separately, by `scripts/upgrade-talos.sh` - see below.
+Bootstraps a Talos Linux Kubernetes cluster: generates machine secrets, renders a machine config per node from a small set of templates, applies it, bootstraps the first control plane node, and waits for the cluster to come up healthy. Talos and Kubernetes upgrades are handled separately, by [`scripts/talos.sh`](../../../scripts) at the repo root - see below.
 
 ## Example
 
@@ -52,11 +52,30 @@ For the full write-up behind these decisions, see [Homelab Diary Part 4](https:/
 
 ## Upgrading
 
-Bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this only updates the *declared* image, it doesn't touch the running OS. Then, from the same directory, run `scripts/upgrade-talos.sh` (fetched alongside the rest of this module - find it under `.terraform/modules/<name>/terraform/modules/talos/scripts/upgrade-talos.sh`) to actually roll the upgrade out: it reads each node's target image from the module's `nodes` output, snapshots etcd, and upgrades one node at a time, gated on Talos *and* Kubernetes health between each. Requires `talosctl`, `kubectl`, `jq`, and `tofu` on your PATH; set `TALOSCTL=<path>` to use a specific `talosctl` binary instead of whatever's on PATH (useful when operating multiple clusters on different versions).
+Get `scripts/talos.sh` from the [repo root](../../../scripts) - it's not part of this module, since it's not Terraform and doesn't need to be fetched through a module source:
 
 ```
-./upgrade-talos.sh <cluster-dir>   # required - the directory you'd normally run tofu apply from
+curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/scripts-v1.0.0/scripts/talos.sh -o talos.sh
+chmod +x talos.sh
 ```
+
+**Talos OS upgrade:** bump the target node(s)' `installer_image_url` and `tofu apply` as usual - this only updates the *declared* image, it doesn't touch the running OS. Then, from the same directory:
+
+```
+./talos.sh upgrade-talos <cluster-dir>
+```
+
+It reads each node's target image from the module's `nodes` output, snapshots etcd, and upgrades one node at a time, gated on Talos *and* Kubernetes health between each.
+
+**Kubernetes upgrade:** run this *before* touching `k8s_version` in Terraform:
+
+```
+./talos.sh upgrade-k8s <cluster-dir> <target-version>
+```
+
+It snapshots etcd, then drives `talosctl upgrade-k8s` (which sequences the actual component rollout itself). Once it's done, bump `k8s_version` in your Terraform config to match and `tofu apply`, to sync the declaration with what's now actually running.
+
+Both need `talosctl`, `kubectl`, `jq`, and `tofu` on your PATH; set `TALOSCTL=<path>` to use a specific `talosctl` binary instead of whatever's on PATH (useful when operating multiple clusters on different versions). See the script's own `--help` for the full set of env vars.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -97,7 +116,7 @@ No modules.
 | <a name="output_controlplane_ips"></a> [controlplane\_ips](#output\_controlplane\_ips) | Talos API IPs of every control plane node |
 | <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubernetes configuration for kubectl |
 | <a name="output_machine_configs"></a> [machine\_configs](#output\_machine\_configs) | Generated machine configuration for each node |
-| <a name="output_nodes"></a> [nodes](#output\_nodes) | Per-node Talos API endpoint, role, and target installer image - consumed by scripts/upgrade-talos.sh |
+| <a name="output_nodes"></a> [nodes](#output\_nodes) | Per-node Talos API endpoint, role, and target installer image - consumed by scripts/talos.sh at the repo root |
 | <a name="output_talosconfig"></a> [talosconfig](#output\_talosconfig) | Talos client configuration for talosctl |
 | <a name="output_worker_ips"></a> [worker\_ips](#output\_worker\_ips) | Talos API IPs of every worker node |
 <!-- END_TF_DOCS -->

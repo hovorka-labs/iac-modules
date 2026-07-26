@@ -19,7 +19,7 @@ output "machine_configs" {
 }
 
 output "nodes" {
-  description = "Per-node Talos API endpoint, role, and target installer image - consumed by scripts/upgrade-talos.sh"
+  description = "Per-node Talos API endpoint, role, and target installer image - consumed by scripts/talos.sh at the repo root"
   value = {
     for name, node in var.nodes : name => {
       talos_api_ip        = local.talos_api_ips[name]
