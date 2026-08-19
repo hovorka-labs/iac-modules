@@ -1,0 +1,48 @@
+# Configuration shared by every node in the cluster
+
+cluster:
+  apiServer:
+    image: registry.k8s.io/kube-apiserver:${k8s_version}
+  controllerManager:
+    image: registry.k8s.io/kube-controller-manager:${k8s_version}
+  proxy:
+    image: registry.k8s.io/kube-proxy:${k8s_version}
+%{ if disable_kube_proxy }
+    disabled: true
+%{ endif }
+  scheduler:
+    image: registry.k8s.io/kube-scheduler:${k8s_version}
+
+  # Cluster-wide, so set identically on every node rather than just control
+  # planes - Talos validates this stays consistent across the cluster.
+  network:
+    cni:
+      name: none # CNI is installed separately
+%{ if length(pod_subnets) > 0 }
+    podSubnets:
+%{ for cidr in pod_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+%{ if length(service_subnets) > 0 }
+    serviceSubnets:
+%{ for cidr in service_subnets }
+      - ${cidr}
+%{ endfor }
+%{ endif }
+
+machine:
+  install:
+    image: ${installer_image_url}
+  kubelet:
+    image: ghcr.io/siderolabs/kubelet:${k8s_version}
+
+  # Topology labels, plus any extra per-node labels (e.g. for dedicated worker pools)
+  nodeLabels:
+    topology.kubernetes.io/region: ${region}
+    topology.kubernetes.io/zone: ${zone}
+%{ for key, value in node_labels ~}
+    ${key}: ${value}
+%{ endfor ~}
+
+  type: ${machine_type}

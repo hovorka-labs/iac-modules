@@ -1,0 +1,67 @@
+resource "talos_machine_secrets" "this" {}
+
+data "talos_client_configuration" "this" {
+  cluster_name         = var.cluster.name
+  client_configuration = talos_machine_secrets.this.client_configuration
+  nodes                = [for ip in local.talos_api_ips : ip]
+  endpoints            = local.control_plane_ips
+}
+
+data "talos_machine_configuration" "this" {
+  for_each = var.nodes
+
+  cluster_name     = var.cluster.name
+  cluster_endpoint = "https://${local.cluster_endpoint}:6443"
+  machine_type     = each.value.machine_type
+  machine_secrets  = talos_machine_secrets.this.machine_secrets
+  config_patches   = local.node_config_patches[each.key]
+}
+
+resource "talos_machine_configuration_apply" "this" {
+  for_each = var.nodes
+
+  node                        = local.talos_api_ips[each.key]
+  apply_mode                  = each.value.apply_mode
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
+}
+
+resource "talos_machine_bootstrap" "this" {
+  depends_on = [
+    talos_machine_configuration_apply.this,
+  ]
+
+  node                 = local.first_control_plane_api_ip
+  client_configuration = talos_machine_secrets.this.client_configuration
+}
+
+data "talos_cluster_health" "this" {
+  depends_on = [
+    talos_machine_configuration_apply.this,
+    talos_machine_bootstrap.this,
+  ]
+
+  skip_kubernetes_checks = true
+  client_configuration   = data.talos_client_configuration.this.client_configuration
+  control_plane_nodes    = local.control_plane_ips
+  worker_nodes           = local.worker_ips
+  endpoints              = data.talos_client_configuration.this.endpoints
+
+  timeouts = {
+    read = "5m"
+  }
+}
+
+resource "talos_cluster_kubeconfig" "this" {
+  depends_on = [
+    talos_machine_bootstrap.this,
+    data.talos_cluster_health.this,
+  ]
+
+  node                 = local.first_control_plane_api_ip
+  client_configuration = talos_machine_secrets.this.client_configuration
+
+  timeouts = {
+    read = "1m"
+  }
+}

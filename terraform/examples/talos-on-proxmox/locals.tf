@@ -1,0 +1,82 @@
+locals {
+  # Per-role sizing. Controlplanes only run the control plane components so
+  # they stay small; workers get the bulk of each host's resources.
+  role_defaults = {
+    controlplane = {
+      cores     = 2
+      memory    = 4096
+      disk_size = 40
+    }
+    worker = {
+      cores     = 4
+      memory    = 8192
+      disk_size = 100
+    }
+  }
+
+  virtual_machines = {
+    for name, node in var.nodes : name => {
+      node_name = node.proxmox_node
+
+      cpu = {
+        cores = local.role_defaults[node.role].cores
+        # host passes through the Proxmox host's own CPU features. Proxmox's
+        # own default (qemu64) lacks instruction sets the Talos kernel wants,
+        # so leaving this unset silently produces VMs that fail to boot.
+        type = "host"
+      }
+      memory = {
+        dedicated = local.role_defaults[node.role].memory
+      }
+
+      network_devices = [
+        {
+          bridge = "vmbr0"
+        }
+      ]
+
+      disks = [
+        {
+          datastore_id = var.datastore.disk
+          size         = local.role_defaults[node.role].disk_size
+        }
+      ]
+
+      cdrom = {
+        file_id = "${var.datastore.iso}:iso/${module.talos_image.iso_file_name}"
+      }
+      boot_order = ["scsi0", "ide3"]
+
+      agent_enabled         = true
+      operating_system_type = "l26"
+
+      init = {
+        datastore_id = var.datastore.disk
+        dns          = var.network_dns_servers
+        ipv4 = {
+          address = node.ip
+          gateway = var.network_gateway
+        }
+      }
+    }
+  }
+
+  # The Talos module wants a bare IP and a separate subnet mask, not the
+  # CIDR notation Proxmox's cloud-init wants above - split it once here.
+  talos_nodes = {
+    for name, node in var.nodes : name => {
+      machine_type = node.role
+      # Proxmox CSI/CCM call the Proxmox API using this zone value directly
+      # as the node name, so it has to be the real Proxmox node, not this
+      # node's own identity in the nodes map.
+      zone        = node.proxmox_node
+      ip          = split("/", node.ip)[0]
+      subnet_mask = split("/", node.ip)[1]
+      gateway     = var.network_gateway
+
+      mac_address         = module.vms.mac_addresses[name]
+      installer_image_url = module.talos_image.installer_image
+      k8s_version         = var.k8s_version
+    }
+  }
+}

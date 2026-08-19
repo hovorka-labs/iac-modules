@@ -1,0 +1,73 @@
+# Control plane specific configuration
+
+cluster:
+  allowSchedulingOnControlPlanes: ${allow_scheduling_on_controlplanes}
+
+  apiServer:
+    certSANs:
+%{ if vip != null ~}
+      - ${vip}
+%{ endif ~}
+%{ for san in api_server_extra_sans ~}
+      - ${san}
+%{ endfor ~}
+    ${indent(4, api_server_config)}
+
+%{ if external_cloud_provider }
+  externalCloudProvider:
+    enabled: true
+
+%{ endif }
+  discovery:
+    enabled: true
+    registries:
+      service:
+        disabled: false
+
+  extraManifests: ${extra_manifests}
+
+machine:
+%{ if allow_scheduling_on_controlplanes ~}
+  # Talos labels every control plane node to keep it out of external/L2
+  # load balancer backend pools by default - the right call for a normal
+  # HA cluster, but if this node is also meant to take workload traffic
+  # (single-node or all-in-one setups), the label has to go, or nothing
+  # can reach it through a LoadBalancer Service.
+  nodeLabels:
+    node.kubernetes.io/exclude-from-external-load-balancers:
+      $patch: delete
+
+%{ endif ~}
+  network:
+%{ if use_dhcp ~}
+    interfaces:
+      - interface: eth0
+        dhcp: true
+%{ else ~}
+%{ if interface_name != "" ~}
+    interfaces:
+      - interface: ${interface_name}
+        addresses:
+          - ${ip}/${subnet_mask}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ else ~}
+%{ if mac_address != "" ~}
+    interfaces:
+      - addresses:
+          - ${ip}/${subnet_mask}
+        deviceSelector:
+          hardwareAddr: ${mac_address}
+        dhcp: false
+        routes:
+          - gateway: ${gateway}
+            network: 0.0.0.0/0
+%{ if vip != null ~}
+        vip:
+          ip: ${vip}
+%{ endif ~}
+%{ endif ~}
+%{ endif ~}
+%{ endif ~}

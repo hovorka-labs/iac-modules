@@ -1,0 +1,81 @@
+# IaC Modules
+
+Reusable Terraform modules and Ansible roles for homelab and self-hosted infrastructure.
+
+## Usage
+
+Reference any module from your Terraform configuration via git:
+
+```hcl
+module "talos_cluster" {
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=main"
+  # ...
+}
+```
+
+`?ref=main` always resolves to the latest; pin to a specific [commit](https://github.com/hovorka-labs/iac-modules/commits/main) via `?ref=<sha>` instead if you want something reproducible - this repo isn't using version tags right now.
+
+## Terraform Modules
+
+### Proxmox
+
+| Module | Description |
+|--------|-------------|
+| [proxmox/virtual-machines](terraform/modules/proxmox/virtual-machines) | Create and manage Proxmox VMs |
+| [proxmox/images/general](terraform/modules/proxmox/images/general) | Download generic images to Proxmox nodes |
+| [proxmox/users/role](terraform/modules/proxmox/users/role) | Manage Proxmox roles and privileges |
+| [proxmox/users/user](terraform/modules/proxmox/users/user) | Manage Proxmox users and ACLs |
+| [proxmox/users/user-token](terraform/modules/proxmox/users/user-token) | Manage Proxmox API tokens |
+
+### Kubernetes / Talos
+
+| Module | Description |
+|--------|-------------|
+| [talos](terraform/modules/talos) | Bootstrap a Talos Linux Kubernetes cluster |
+| [talos/images](terraform/modules/talos/images) | Look up Talos Linux images (installer/ISO URLs) from the Image Factory |
+
+### Helm Charts
+
+| Module | Description |
+|--------|-------------|
+| [helm/cilium](terraform/modules/helm/cilium) | Deploy Cilium CNI |
+| [helm/proxmox-csi-plugin](terraform/modules/helm/proxmox-csi-plugin) | Deploy Proxmox CSI storage driver |
+| [helm/prometheus-operator-crds](terraform/modules/helm/prometheus-operator-crds) | Install Prometheus Operator CRDs |
+| [helm/gitlab-runner](terraform/modules/helm/gitlab-runner) | Deploy GitLab Runner |
+| [helm/actions-runner-controller](terraform/modules/helm/actions-runner-controller) | Deploy GitHub Actions Runner Controller |
+| [helm/actions-runner-deployment](terraform/modules/helm/actions-runner-deployment) | Deploy GitHub Actions Runner workloads |
+
+## Scripts
+
+Operational tooling that isn't Terraform - things like cluster upgrades, which are multi-step, multi-minute procedures that don't belong inside an apply. One self-contained script per concern; get them straight from `main`, no need to go through a module:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hovorka-labs/iac-modules/main/scripts/talos.sh -o talos.sh
+chmod +x talos.sh
+./talos.sh --help
+```
+
+| Script | What it does |
+|--------|--------------|
+| [scripts/talos.sh](scripts/talos.sh) | Talos OS and Kubernetes upgrades for a cluster built with the [talos](terraform/modules/talos) module |
+
+## Ansible Roles
+
+*Coming soon* — roles will live under `ansible/roles/`.
+
+## Examples
+
+| Example | What it builds |
+|---------|----------------|
+| [talos-on-proxmox](terraform/examples/talos-on-proxmox) | Talos images + VMs on Proxmox, built up step by step in the Homelab Diary blog series |
+
+## Development
+
+```bash
+# Install pre-commit hooks
+brew install pre-commit tflint terraform-docs trivy
+pre-commit install
+
+# Run all checks
+pre-commit run --all-files
+```
