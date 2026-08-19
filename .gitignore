@@ -27,3 +27,8 @@ id_rsa.pub
 *.retry
 
 local-test/
+
+# Claude Code local session/tooling state (e.g. scheduled_tasks.lock) - not
+# source, keeps getting re-created without a trailing newline and tripping
+# pre-commit's end-of-file-fixer.
+.claude/
