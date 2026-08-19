@@ -53,6 +53,10 @@ machine:
         routes:
           - gateway: ${gateway}
             network: 0.0.0.0/0
+%{ if vip != null ~}
+        vip:
+          ip: ${vip}
+%{ endif ~}
 %{ else ~}
 %{ if mac_address != "" ~}
     interfaces:
