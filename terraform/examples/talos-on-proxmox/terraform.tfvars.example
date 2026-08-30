@@ -2,7 +2,7 @@ proxmox_endpoint  = "https://pve.example.com:8006"
 proxmox_api_token = "terraform@pve!provider=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_insecure  = true
 
-talos_version = "v1.9.5"
+talos_version = "v1.12.11"
 datastore = {
   iso  = "local"
   disk = "local-lvm"

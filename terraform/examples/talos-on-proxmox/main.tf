@@ -58,6 +58,7 @@ module "talos_cluster" {
     name                = var.talos_cluster_name
     region              = var.talos_cluster_name
     gateway_api_version = var.gateway_api_version
+    disable_kube_proxy  = true # As a part of the next blog post, we will deploy Cilium which replaces kube-proxy
   }
 
   nodes = local.talos_nodes
