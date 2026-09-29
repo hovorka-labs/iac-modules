@@ -1,0 +1,14 @@
+node:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      effect: NoSchedule
+
+storageClass:
+  - name: proxmox-local-lvm
+    storage: local-lvm
+    reclaimPolicy: Delete
+    fstype: ext4
+    cache: writethrough
+    annotations:
+      storageclass.kubernetes.io/is-default-class: "true"
+    ssd: true
