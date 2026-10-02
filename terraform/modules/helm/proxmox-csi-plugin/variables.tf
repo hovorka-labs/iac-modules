@@ -1,3 +1,9 @@
+variable "namespace" {
+  description = "The namespace to deploy the Helm chart to"
+  type        = string
+  default     = "kube-system"
+}
+
 variable "chart_version" {
   description = "proxmox-csi-plugin chart version"
   type        = string

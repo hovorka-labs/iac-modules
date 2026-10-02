@@ -1,3 +1,9 @@
+variable "namespace" {
+  description = "The namespace to deploy the Helm chart to"
+  type        = string
+  default     = "kube-system"
+}
+
 variable "cilium_values_path" {
   description = "List of Cilium values paths"
   type        = list(string)

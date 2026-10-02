@@ -1,18 +1,6 @@
-resource "kubernetes_labels" "csi_proxmox_pod_security" {
-  api_version = "v1"
-  kind        = "Namespace"
-  metadata {
-    name = "csi-proxmox"
-  }
-  labels = {
-    "pod-security.kubernetes.io/enforce" = "privileged"
-  }
-  depends_on = [helm_release.proxmox_csi_plugin]
-}
-
 resource "helm_release" "proxmox_csi_plugin" {
   name             = "proxmox-csi-plugin"
-  namespace        = "csi-proxmox"
+  namespace        = var.namespace
   repository       = "oci://ghcr.io/sergelogvinov/charts"
   chart            = "proxmox-csi-plugin"
   create_namespace = true
