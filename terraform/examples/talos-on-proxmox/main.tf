@@ -16,7 +16,7 @@
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos/images?ref=blog/homelab-diary-part4"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos/images?ref=blog/homelab-diary-part5"
 
   talos_image_version  = var.talos_version
   talos_image_platform = "nocloud"
@@ -35,7 +35,7 @@ module "talos_image" {
 # The static IP comes from cloud-init, which the nocloud platform picks up
 # before Talos even has a machine config to work from.
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=blog/homelab-diary-part4"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=blog/homelab-diary-part5"
 
   virtual_machines = local.virtual_machines
 }
@@ -49,7 +49,7 @@ module "vms" {
 # region reuses the cluster name - the Proxmox CSI plugin wired in below
 # needs it for volume topology matching.
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=blog/homelab-diary-part4"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=blog/homelab-diary-part5"
 
   cluster = {
     name                = var.talos_cluster_name
