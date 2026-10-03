@@ -1,43 +1,14 @@
 # Control plane specific configuration
 
 cluster:
-  allowSchedulingOnControlPlanes: ${allow_scheduling_on_controlplanes}
-
-  apiServer:
-    certSANs:
-%{ if vip != null ~}
-      - ${vip}
-%{ endif ~}
-%{ for san in api_server_extra_sans ~}
-      - ${san}
-%{ endfor ~}
-    ${indent(4, api_server_config)}
-
 %{ if external_cloud_provider }
   externalCloudProvider:
     enabled: true
 
 %{ endif }
-  discovery:
-    enabled: true
-    registries:
-      service:
-        disabled: false
-
   extraManifests: ${extra_manifests}
 
 machine:
-%{ if allow_scheduling_on_controlplanes ~}
-  # Talos labels every control plane node to keep it out of external/L2
-  # load balancer backend pools by default - the right call for a normal
-  # HA cluster, but if this node is also meant to take workload traffic
-  # (single-node or all-in-one setups), the label has to go, or nothing
-  # can reach it through a LoadBalancer Service.
-  nodeLabels:
-    node.kubernetes.io/exclude-from-external-load-balancers:
-      $patch: delete
-
-%{ endif ~}
   network:
 %{ if use_dhcp ~}
     interfaces:
@@ -74,4 +45,62 @@ machine:
 %{ endif ~}
 %{ endif ~}
 %{ endif ~}
+%{ endif ~}
+
+# kube-apiserver/controller-manager/scheduler/proxy only ever run on control
+# planes - these documents are rejected by Talos if applied to a worker.
+
+---
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+image: registry.k8s.io/kube-apiserver:${k8s_version}
+certExtraSANs:
+%{ if vip != null ~}
+  - ${vip}
+%{ endif ~}
+%{ for san in api_server_extra_sans ~}
+  - ${san}
+%{ endfor ~}
+${api_server_config}
+
+---
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+image: registry.k8s.io/kube-controller-manager:${k8s_version}
+
+---
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+image: registry.k8s.io/kube-scheduler:${k8s_version}
+
+---
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+image: registry.k8s.io/kube-proxy:${k8s_version}
+%{ if disable_kube_proxy ~}
+enabled: false
+%{ endif ~}
+
+# CNI is installed separately (e.g. Cilium) - drop the Flannel deployment
+# Talos otherwise generates by default.
+---
+apiVersion: v1alpha1
+kind: KubeFlannelCNIConfig
+$patch: delete
+%{ if allow_scheduling_on_controlplanes ~}
+
+# Talos taints every control plane node NoSchedule and excludes it from
+# external/L2 load balancer backend pools by default - the right call for a
+# normal HA cluster, but if this node is also meant to take workload traffic
+# (single-node or all-in-one setups), both have to go, or nothing can be
+# scheduled here or reached through a LoadBalancer Service.
+---
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+taints:
+  node-role.kubernetes.io/control-plane:
+    $patch: delete
+labels:
+  node.kubernetes.io/exclude-from-external-load-balancers:
+    $patch: delete
 %{ endif ~}
