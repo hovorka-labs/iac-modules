@@ -61,7 +61,7 @@ module "talos_cluster" {
   nodes = local.talos_nodes
 }
 
-# Step 4: Create a Proxmox role, user, and API token scoped to just what theß CSI plugin needs.
+# Step 4: Create a Proxmox role, user, and API token scoped to just what the CSI plugin needs.
 module "k8s_csi_role" {
   source  = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/users/role?ref=blog/homelab-diary-part5"
   role_id = "hovorkalabs-foundation-talos-k8s-csi"
