@@ -50,12 +50,6 @@ cgroup:
 
 # --- Traffic into the cluster ---
 
-# Gateway API Configuration
-gatewayAPI:
-  enabled: true
-  enableAlpn: true
-  enableAppProtocol: true
-
 # L2 Announcements
 l2announcements:
   enabled: true
@@ -94,7 +88,7 @@ operator:
       labels:
         release: kube-prometheus-stack
 
-# Envoy (L7 / Gateway API) metrics
+# Envoy (L7) metrics
 envoy:
   prometheus:
     serviceMonitor:
