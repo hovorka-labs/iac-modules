@@ -16,9 +16,9 @@ variable "proxmox_insecure" {
 }
 
 variable "talos_version" {
-  description = "Talos OS version to deploy (e.g., v1.13.7) - must be >= v1.12, since the talos module always patches a HostnameConfig document that older versions don't recognize"
+  description = "Talos OS version to deploy (e.g., v1.14.2) - must be >= v1.12, since the talos module always patches a HostnameConfig document that older versions don't recognize, and must be >= v1.14 since the pinned talos provider (~> 0.12) generates a DiscoveryServiceConfig document that older Talos versions can't parse"
   type        = string
-  default     = "v1.13.7"
+  default     = "v1.14.2"
 }
 
 variable "datastore" {
@@ -62,9 +62,9 @@ variable "talos_cluster_name" {
 }
 
 variable "k8s_version" {
-  description = "Kubernetes version to deploy (e.g., v1.31.4)"
+  description = "Kubernetes version to deploy (e.g., v1.32.3) - must be >= v1.32.0 and < v1.38.0, the range Talos 1.14 supports"
   type        = string
-  default     = "v1.31.4"
+  default     = "v1.32.3"
 }
 
 variable "gateway_api_version" {

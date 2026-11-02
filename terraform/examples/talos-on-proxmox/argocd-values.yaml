@@ -1,0 +1,19 @@
+# This is the bare minimum to get ArgoCD running and reachable via
+# `kubectl port-forward`. It deliberately skips ingress/Gateway API
+# exposure, OIDC, and HA settings - those are environment-specific
+# decisions, not something a public example should bake in.
+
+configs:
+  params:
+    # No TLS termination in this example - terminate at your
+    # ingress/gateway in a real deployment instead.
+    server.insecure: true
+
+server:
+  replicas: 1
+
+controller:
+  replicas: 1
+
+redis-ha:
+  enabled: false

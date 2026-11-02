@@ -2,7 +2,7 @@ proxmox_endpoint  = "https://pve.example.com:8006"
 proxmox_api_token = "terraform@pve!provider=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_insecure  = true
 
-talos_version = "v1.12.11"
+talos_version = "v1.14.2"
 datastore = {
   iso  = "local"
   disk = "local-lvm"
@@ -12,7 +12,7 @@ network_gateway     = "192.168.1.1"
 network_dns_servers = ["1.1.1.1", "8.8.8.8"]
 
 talos_cluster_name  = "talos-on-proxmox"
-k8s_version         = "v1.31.4"
+k8s_version         = "v1.32.3"
 gateway_api_version = "v1.2.1"
 
 nodes = {

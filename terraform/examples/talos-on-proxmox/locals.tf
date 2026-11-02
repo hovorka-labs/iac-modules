@@ -79,4 +79,13 @@ locals {
       k8s_version         = var.k8s_version
     }
   }
+
+  # Variables required for k8s and Helm providers
+  kubeconfig_parsed = yamldecode(module.talos_cluster.kubeconfig)
+  kubeconfig_data = {
+    host                   = local.kubeconfig_parsed.clusters[0].cluster.server
+    cluster_ca_certificate = base64decode(local.kubeconfig_parsed.clusters[0].cluster["certificate-authority-data"])
+    client_certificate     = base64decode(local.kubeconfig_parsed.users[0].user["client-certificate-data"])
+    client_key             = base64decode(local.kubeconfig_parsed.users[0].user["client-key-data"])
+  }
 }
