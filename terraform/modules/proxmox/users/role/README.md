@@ -9,7 +9,7 @@
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | ~> 0.111 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.121.0 |
 ## Modules
 
 No modules.
