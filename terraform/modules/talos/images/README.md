@@ -39,12 +39,12 @@ This returns a task UPID immediately (Proxmox downloads it server-side); poll `/
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.12 |
-| <a name="requirement_talos"></a> [talos](#requirement\_talos) | ~> 0.11 |
+| <a name="requirement_talos"></a> [talos](#requirement\_talos) | ~> 0.12.0 |
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_talos"></a> [talos](#provider\_talos) | 0.11.0 |
+| <a name="provider_talos"></a> [talos](#provider\_talos) | ~> 0.12.0 |
 ## Modules
 
 No modules.

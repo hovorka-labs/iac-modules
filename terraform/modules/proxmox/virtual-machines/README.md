@@ -63,7 +63,7 @@ A couple of things here exist because of problems hit in practice, not because t
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.111.1 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | ~> 0.111 |
 ## Modules
 
 No modules.
