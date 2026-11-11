@@ -1,0 +1,22 @@
+# Bootstraps exactly one Application: a root "app of apps" pointing at
+# ArgoCD's own public demo repo. From here on, ArgoCD reconciles everything
+# else straight from Git - this is the last resource OpenTofu ever creates
+# inside the cluster.
+#
+# A public, unauthenticated repo here means this example works end to end
+# for anyone who applies it, with no credentials to set up. Pointing this at
+# a private repo instead needs repository credentials registered on the
+# ArgoCD side first (configs.repositories/credentialTemplates in
+# argocd-values.yaml) - see the blog post for how those get wired in.
+applications:
+  root:
+    namespace: argocd
+    project: default
+    source:
+      repoURL: https://github.com/argoproj/argocd-example-apps.git
+      targetRevision: HEAD
+      path: guestbook
+    destination:
+      server: https://kubernetes.default.svc
+    syncPolicy:
+      automated: {}

@@ -16,7 +16,7 @@
 # Platform is "nocloud": it's what makes Talos read the static IP we hand
 # it below via cloud-init, instead of waiting on DHCP.
 module "talos_image" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos/images?ref=blog/homelab-diary-part5"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos/images?ref=blog/homelab-diary-part6"
 
   talos_image_version  = var.talos_version
   talos_image_platform = "nocloud"
@@ -35,7 +35,7 @@ module "talos_image" {
 # The static IP comes from cloud-init, which the nocloud platform picks up
 # before Talos even has a machine config to work from.
 module "vms" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=blog/homelab-diary-part5"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/proxmox/virtual-machines?ref=blog/homelab-diary-part6"
 
   virtual_machines = local.virtual_machines
 }
@@ -49,7 +49,7 @@ module "vms" {
 # region reuses the cluster name - the Proxmox CSI plugin (deployed later,
 # via ArgoCD) needs it for volume topology matching.
 module "talos_cluster" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=blog/homelab-diary-part5"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=blog/homelab-diary-part6"
 
   cluster = {
     name                = var.talos_cluster_name
@@ -65,7 +65,7 @@ module "talos_cluster" {
 # creates ServiceMonitor resources when its Prometheus integration is
 # enabled, so those CRDs need to already exist in the cluster.
 module "prometheus_operator_crds" {
-  source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/prometheus-operator-crds?ref=blog/homelab-diary-part5"
+  source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/prometheus-operator-crds?ref=blog/homelab-diary-part6"
   depends_on = [module.talos_cluster]
 
   chart_version = "32.0.1"
@@ -74,7 +74,7 @@ module "prometheus_operator_crds" {
 # Step 5: Deploy Cilium as the cluster's CNI, replacing kube-proxy (see
 # disable_kube_proxy in Step 3) with its own eBPF-based implementation.
 module "cilium" {
-  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/cilium?ref=blog/homelab-diary-part5"
+  source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/cilium?ref=blog/homelab-diary-part6"
 
   cilium_values_path = [
     "${path.module}/cilium-values.yaml"
@@ -91,12 +91,27 @@ module "cilium" {
 # keys like `server`/`configs`/`redis` sit at the top level, not nested
 # under an `argo-cd:` key.
 module "argocd" {
-  source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/argocd?ref=blog/homelab-diary-part5"
+  source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/argocd?ref=blog/homelab-diary-part6"
   depends_on = [module.cilium]
 
   chart_version = "9.5.19"
 
   values_path = [
     "${path.module}/argocd-values.yaml"
+  ]
+}
+
+# Step 7: Bootstrap ArgoCD's root Application - an "app of apps" pointing at
+# a Git repo. This is the last resource OpenTofu ever creates inside the
+# cluster: everything from here on is reconciled by ArgoCD itself, straight
+# from Git.
+module "argocd_apps" {
+  source     = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/helm/argocd-apps?ref=blog/homelab-diary-part6"
+  depends_on = [module.argocd]
+
+  chart_version = "2.0.7"
+
+  values_path = [
+    "${path.module}/argocd-apps-values.yaml"
   ]
 }
