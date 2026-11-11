@@ -1,0 +1,125 @@
+# --- Pod networking and routing ---
+
+# IPAM
+ipam:
+  mode: kubernetes
+
+k8s:
+  requireIPv4PodCIDR: true
+
+# Native routing (no overlay)
+routingMode: native
+autoDirectNodeRoutes: true
+ipv4NativeRoutingCIDR: "10.244.0.0/16"
+enableIPv4Masquerade: true
+
+# --- Talos-specific settings ---
+
+# kube-proxy replacement
+kubeProxyReplacement: true
+
+# Reach the API server through KubePrism
+k8sServiceHost: localhost
+k8sServicePort: 7445
+
+# Security Context Configuration
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+# CGroup Configuration
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+# --- Traffic into the cluster ---
+
+# L2 Announcements
+l2announcements:
+  enabled: true
+
+# --- Security ---
+
+# Encryption settings
+encryption:
+  enabled: true
+  type: wireguard
+  nodeEncryption: true
+
+# --- Observability ---
+
+# Prometheus metrics (core Cilium)
+prometheus:
+  enabled: true
+  metricsService: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+
+# Grafana dashboards (Cilium)
+dashboards:
+  enabled: true
+
+# Operator metrics
+operator:
+  dashboards:
+    enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+
+# Envoy (L7) metrics
+envoy:
+  prometheus:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+
+# Hubble configuration
+hubble:
+  enabled: true
+  ui:
+    enabled: true
+  relay:
+    enabled: true
+    prometheus:
+      serviceMonitor:
+        enabled: true
+        labels:
+          release: kube-prometheus-stack
+  metrics:
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    enableOpenMetrics: true
+    dashboards:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack

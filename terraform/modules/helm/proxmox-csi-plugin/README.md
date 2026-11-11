@@ -1,0 +1,36 @@
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+| ---- | ------- |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.12 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | 3.2.0 |
+## Providers
+
+| Name | Version |
+| ---- | ------- |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | 3.2.0 |
+## Modules
+
+No modules.
+## Resources
+
+| Name | Type |
+| ---- | ---- |
+| [helm_release.proxmox_csi_plugin](https://registry.terraform.io/providers/hashicorp/helm/3.2.0/docs/resources/release) | resource |
+## Inputs
+
+| Name | Description | Default | Required |
+| ---- | ----------- | ------- | :------: |
+| <a name="input_chart_version"></a> [chart\_version](#input\_chart\_version) | proxmox-csi-plugin chart version | n/a | yes |
+| <a name="input_proxmox_region"></a> [proxmox\_region](#input\_proxmox\_region) | Proxmox region (cluster name) | n/a | yes |
+| <a name="input_proxmox_token_id"></a> [proxmox\_token\_id](#input\_proxmox\_token\_id) | Proxmox API token ID (user@realm!token\_name) | n/a | yes |
+| <a name="input_proxmox_token_secret"></a> [proxmox\_token\_secret](#input\_proxmox\_token\_secret) | Proxmox API token secret | n/a | yes |
+| <a name="input_proxmox_url"></a> [proxmox\_url](#input\_proxmox\_url) | Proxmox API URL | n/a | yes |
+| <a name="input_namespace"></a> [namespace](#input\_namespace) | The namespace to deploy the Helm chart to | `"kube-system"` | no |
+| <a name="input_proxmox_insecure"></a> [proxmox\_insecure](#input\_proxmox\_insecure) | Skip TLS verification for Proxmox API | `false` | no |
+| <a name="input_values_path"></a> [values\_path](#input\_values\_path) | List of values file paths | `[]` | no |
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->

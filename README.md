@@ -41,6 +41,7 @@ module "talos_cluster" {
 | [helm/cilium](terraform/modules/helm/cilium) | Deploy Cilium CNI |
 | [helm/proxmox-csi-plugin](terraform/modules/helm/proxmox-csi-plugin) | Deploy Proxmox CSI storage driver |
 | [helm/prometheus-operator-crds](terraform/modules/helm/prometheus-operator-crds) | Install Prometheus Operator CRDs |
+| [helm/argocd](terraform/modules/helm/argocd) | Deploy ArgoCD |
 | [helm/gitlab-runner](terraform/modules/helm/gitlab-runner) | Deploy GitLab Runner |
 | [helm/actions-runner-controller](terraform/modules/helm/actions-runner-controller) | Deploy GitHub Actions Runner Controller |
 | [helm/actions-runner-deployment](terraform/modules/helm/actions-runner-deployment) | Deploy GitHub Actions Runner workloads |
