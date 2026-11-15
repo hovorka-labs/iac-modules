@@ -1,0 +1,35 @@
+# Lean, homelab-appropriate config: single replica, Raft integrated storage
+# (not "standalone" mode - that defaults to a local file store, not Raft,
+# and Raft is what gives a clean path to more replicas later without
+# changing storage backend). No cloud KMS auto-unseal - unsealing is plain
+# Shamir, handled manually via scripts/openbao.sh, which is what keeps this
+# workable fully air-gapped. TLS and ingress are both environment-specific
+# decisions, same reasoning as argocd-values.yaml - not something a public
+# example should bake in; for now this is reachable via `kubectl
+# port-forward`, same as ArgoCD.
+injector:
+  enabled: false # Not using the Agent Injector - ESO is what delivers secrets into pods here
+
+server:
+  dataStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: local-path # see vendor/local-path-provisioner-v0.0.31.yaml - never rely on "default"
+
+  ha:
+    enabled: true
+    replicas: 1
+    raft:
+      enabled: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          address         = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_disable     = 1
+        }
+
+        storage "raft" {
+          path = "/openbao/data"
+        }

@@ -41,6 +41,9 @@ module "talos_cluster" {
 | [helm/cilium](terraform/modules/helm/cilium) | Deploy Cilium CNI |
 | [helm/proxmox-csi-plugin](terraform/modules/helm/proxmox-csi-plugin) | Deploy Proxmox CSI storage driver |
 | [helm/prometheus-operator-crds](terraform/modules/helm/prometheus-operator-crds) | Install Prometheus Operator CRDs |
+| [helm/openbao](terraform/modules/helm/openbao) | Deploy OpenBao (Raft integrated storage, no cloud KMS) |
+| [helm/external-secrets](terraform/modules/helm/external-secrets) | Deploy External Secrets Operator |
+| [helm/raw-manifests](terraform/modules/helm/raw-manifests) | Apply raw Kubernetes manifests via Helm - the documented exception to this repo's "no kubernetes_manifest" rule |
 | [helm/argocd](terraform/modules/helm/argocd) | Deploy ArgoCD |
 | [helm/argocd-apps](terraform/modules/helm/argocd-apps) | Bootstrap ArgoCD Applications/AppProjects/ApplicationSets via the app-of-apps pattern |
 | [helm/gitlab-runner](terraform/modules/helm/gitlab-runner) | Deploy GitLab Runner |
@@ -60,6 +63,7 @@ chmod +x talos.sh
 | Script | What it does |
 |--------|--------------|
 | [scripts/talos.sh](scripts/talos.sh) | Talos OS and Kubernetes upgrades for a cluster built with the [talos](terraform/modules/talos) module |
+| [scripts/openbao.sh](scripts/openbao.sh) | OpenBao init/unseal/configure/seed for a cluster built with the [helm/openbao](terraform/modules/helm/openbao) module |
 
 ## Ansible Roles
 

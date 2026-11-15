@@ -62,6 +62,13 @@ locals {
           extraArgs  = local.kubelet_extra_args[name]
         })
       ] : [],
+      length(var.cluster.kubelet_extra_mounts) > 0 ? [
+        yamlencode({
+          apiVersion  = "v1alpha1"
+          kind        = "KubeletConfig"
+          extraMounts = var.cluster.kubelet_extra_mounts
+        })
+      ] : [],
       length(node.node_taints) > 0 ? [
         yamlencode({
           apiVersion = "v1alpha1"

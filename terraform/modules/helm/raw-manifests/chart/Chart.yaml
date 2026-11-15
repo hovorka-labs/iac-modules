@@ -1,0 +1,12 @@
+apiVersion: v2
+name: raw-manifests
+description: >-
+  Passes through pre-rendered Kubernetes manifests unchanged. Not a real
+  chart - a vehicle for applying raw YAML through the same helm_release
+  resource every other module in this repo uses, for things with no
+  upstream chart (e.g. local-path-provisioner) or no race-free way to
+  template CRs via an existing chart's own values (e.g. ESO's
+  ClusterSecretStore/ExternalSecret, applied as a separate release from the
+  operator itself so the CRs can't land before its webhook is ready).
+type: application
+version: 0.1.0

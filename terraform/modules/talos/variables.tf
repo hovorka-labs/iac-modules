@@ -20,6 +20,19 @@ variable "cluster" {
     service_subnets = optional(list(string), [])
     extra_manifests = optional(list(string), [])
 
+    # Extra host paths bind-mounted into the kubelet's own container,
+    # applied to every node. Talos's root filesystem is read-only and its
+    # kubelet runs containerized, so a pod's hostPath volume needs its
+    # target path mounted into the kubelet's container too, or the kubelet
+    # can't propagate it into any pod at all. See the example's
+    # local-path-provisioner setup for why this exists.
+    kubelet_extra_mounts = optional(list(object({
+      destination = string
+      type        = optional(string, "bind")
+      source      = string
+      options     = optional(list(string), ["bind", "rshared", "rw"])
+    })), [])
+
     gateway_api_version = string
   })
 }
