@@ -63,6 +63,18 @@ certExtraSANs:
 %{ endfor ~}
 ${api_server_config}
 
+%{ if kube_authentication_config != "" ~}
+# Structured authentication config (Kubernetes' own
+# apiserver.config.k8s.io AuthenticationConfiguration, embedded as-is under
+# `configuration:`) - current Kubernetes versions reject OIDC flags passed
+# as apiserver extraArgs outright ("use KubeAuthenticationConfig"), so this
+# is the only supported way to wire up an OIDC provider now.
+---
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+${kube_authentication_config}
+
+%{ endif ~}
 ---
 apiVersion: v1alpha1
 kind: KubeControllerManagerConfig

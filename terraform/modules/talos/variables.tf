@@ -10,8 +10,19 @@ variable "cluster" {
 
     vip                   = optional(string)
     api_server_extra_sans = optional(list(string), [])
-    # Extra YAML merged into the apiServer block, e.g. extraArgs for OIDC
-    api_server_config                 = optional(string, "")
+    # Extra YAML merged into the KubeAPIServerConfig document (e.g. resources,
+    # extraArgs that current Kubernetes versions still accept there). NOT the
+    # right place for OIDC - current Kubernetes rejects oidc-* as a raw
+    # apiserver extraArg outright; use kube_authentication_config instead.
+    api_server_config = optional(string, "")
+    # Kubernetes' own structured apiserver AuthenticationConfiguration
+    # (apiserver.config.k8s.io), embedded as a separate KubeAuthenticationConfig
+    # document. This is the only way to configure an OIDC provider (or any
+    # JWT-based authenticator) on current Kubernetes - the old oidc-* apiserver
+    # flags are rejected outright. Provide the full content starting at
+    # `configuration:` (matching apiserver.config.k8s.io's AuthenticationConfiguration
+    # shape) - see https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration
+    kube_authentication_config        = optional(string, "")
     allow_scheduling_on_controlplanes = optional(bool, false)
     external_cloud_provider           = optional(bool, false)
     disable_kube_proxy                = optional(bool, false)

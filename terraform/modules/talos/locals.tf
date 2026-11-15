@@ -81,6 +81,7 @@ locals {
           vip                               = var.cluster.vip
           api_server_extra_sans             = var.cluster.api_server_extra_sans
           api_server_config                 = var.cluster.api_server_config
+          kube_authentication_config        = var.cluster.kube_authentication_config
           allow_scheduling_on_controlplanes = var.cluster.allow_scheduling_on_controlplanes
           external_cloud_provider           = var.cluster.external_cloud_provider
           extra_manifests                   = jsonencode(concat(var.cluster.extra_manifests, local.gateway_api_manifests))
