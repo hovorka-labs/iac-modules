@@ -143,11 +143,6 @@ is_initialized() {
     | jq -e '.initialized == true' >/dev/null 2>&1
 }
 
-is_sealed() {
-  kubectl exec -n "$OPENBAO_NAMESPACE" "$OPENBAO_POD" -- bao status -format=json 2>/dev/null \
-    | jq -e '.sealed == true' >/dev/null 2>&1
-}
-
 require_token() {
   [[ -n "${OPENBAO_TOKEN:-}" ]] || die "OPENBAO_TOKEN is required for this command"
 }
@@ -183,11 +178,14 @@ cmd_unseal() {
   [[ -n "${OPENBAO_UNSEAL_KEY:-}" ]] || die "OPENBAO_UNSEAL_KEY is required"
   setup_kube_access "$1"
 
-  if ! is_sealed; then
-    log "Already unsealed. Nothing to do."
-    return 0
-  fi
-
+  # No is-it-already-sealed pre-check: `bao operator unseal` is itself
+  # idempotent (a no-op reporting current status if already unsealed), so
+  # there's nothing to gain from a pre-check and real cost to getting it
+  # wrong - `bao status`'s JSON output has proven unreliable to parse
+  # straight after a fresh `init` (seen in practice: reported "not sealed"
+  # on a vault that had just been initialized, which always leaves a vault
+  # sealed - no such thing as init-then-already-unsealed). Always just
+  # attempt the unseal and trust its own result.
   log "Unsealing OpenBao"
   kubectl exec -n "$OPENBAO_NAMESPACE" "$OPENBAO_POD" -- bao operator unseal "$OPENBAO_UNSEAL_KEY" \
     || die "unseal failed"
@@ -199,6 +197,17 @@ cmd_configure() {
   [[ -n "${1:-}" ]] || die "cluster-dir required (usage: $0 configure <cluster-dir>)"
   require_token
   setup_kube_access "$1"
+
+  # Unlike `vault server -dev`, a real (non-dev) OpenBao/Vault server boots
+  # with no "secret/" KV engine mounted at all - every path/ACL convention
+  # used elsewhere in this project (secret/data/*, secret/<category>/<app>/...)
+  # assumes one exists, so it has to be created explicitly, once, here.
+  # Vault/OpenBao report an operation against an unmounted path as a 403 on
+  # the internal capability preflight check (not a 404), as a measure
+  # against mount enumeration - that 403 is what every kv read/write fails
+  # with until this has run.
+  log "Enabling the KV v2 secrets engine at secret/ (no-op if already enabled)"
+  bao_exec secrets enable -path=secret -version=2 kv 2>/dev/null || true
 
   log "Enabling the kubernetes auth method (no-op if already enabled)"
   bao_exec auth enable kubernetes 2>/dev/null || true
@@ -255,7 +264,7 @@ cmd_seed() {
   bao_exec kv get "$kv_path" >/dev/null 2>&1 && verb="patch"
 
   log "Seeding $kv_path ($key) from stdin ($verb)"
-  bao_exec_stdin kv "$verb" "$kv_path" "${key}=@-"
+  bao_exec_stdin kv "$verb" "$kv_path" "${key}=-"
   log "Done."
 }
 

@@ -4,11 +4,9 @@ resource "helm_release" "argocd" {
   create_namespace = true
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
+  version          = var.chart_version
   atomic           = true
   timeout          = var.timeout
-  version          = var.chart_version
 
-  values = [
-    for v in var.values_path : file(v)
-  ]
+  values = [for v in var.values_path : file(v)]
 }

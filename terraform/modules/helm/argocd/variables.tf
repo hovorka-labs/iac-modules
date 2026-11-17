@@ -4,15 +4,15 @@ variable "namespace" {
   default     = "argocd"
 }
 
-variable "chart_version" {
-  description = "ArgoCD chart version to install"
-  type        = string
-}
-
 variable "values_path" {
-  description = "List of ArgoCD values file paths. Values are applied against the upstream argo-cd chart directly (no wrapper chart nesting)"
+  description = "List of ArgoCD values paths"
   type        = list(string)
   default     = []
+}
+
+variable "chart_version" {
+  description = "argo-cd chart version to use"
+  type        = string
 }
 
 variable "timeout" {
