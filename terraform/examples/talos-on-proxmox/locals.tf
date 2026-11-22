@@ -80,6 +80,20 @@ locals {
     }
   }
 
+  # Gateway API's own CRDs, applied via the talos module's generic
+  # extra_manifests - the module itself has no Gateway-API-specific
+  # knowledge, this is purely an example-level choice. standard-install.yaml
+  # alone is enough for any version where TLSRoute has already been
+  # promoted out of the experimental channel; the separate experimental
+  # fetch below is only needed for the older default pinned here
+  # (v1.2.1), where TLSRoute isn't in the standard channel yet - drop it if
+  # you bump gateway_api_version past whatever release promoted it (v1.7.0
+  # did).
+  gateway_api_manifests = [
+    "https://github.com/kubernetes-sigs/gateway-api/releases/download/${var.gateway_api_version}/standard-install.yaml",
+    "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${var.gateway_api_version}/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml",
+  ]
+
   # Variables required for k8s and Helm providers
   kubeconfig_parsed = yamldecode(module.talos_cluster.kubeconfig)
   kubeconfig_data = {

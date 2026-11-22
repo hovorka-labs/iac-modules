@@ -52,10 +52,10 @@ module "talos_cluster" {
   source = "git::https://github.com/hovorka-labs/iac-modules.git//terraform/modules/talos?ref=blog/homelab-diary-part7"
 
   cluster = {
-    name                = var.talos_cluster_name
-    region              = var.talos_cluster_name
-    gateway_api_version = var.gateway_api_version
-    disable_kube_proxy  = true # Cilium (deployed below) replaces kube-proxy with its own eBPF implementation
+    name               = var.talos_cluster_name
+    region             = var.talos_cluster_name
+    extra_manifests    = local.gateway_api_manifests
+    disable_kube_proxy = true # Cilium (deployed below) replaces kube-proxy with its own eBPF implementation
 
     # Talos's root filesystem is read-only, so local-path-provisioner's
     # default host path (needed by OpenBao's PVC, Step 7 below) doesn't

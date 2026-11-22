@@ -44,7 +44,6 @@ variable "cluster" {
       options     = optional(list(string), ["bind", "rshared", "rw"])
     })), [])
 
-    gateway_api_version = string
   })
 }
 

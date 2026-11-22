@@ -33,14 +33,6 @@ locals {
     )
   }
 
-  # Applied before Kubernetes even exists, so anything that needs these CRDs
-  # during cluster bootstrap doesn't hit a chicken-and-egg problem waiting on
-  # them.
-  gateway_api_manifests = [
-    "https://github.com/kubernetes-sigs/gateway-api/releases/download/${var.cluster.gateway_api_version}/standard-install.yaml",
-    "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${var.cluster.gateway_api_version}/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml",
-  ]
-
   node_config_patches = {
     for name, node in var.nodes : name => concat(
       [
@@ -84,7 +76,7 @@ locals {
           kube_authentication_config        = var.cluster.kube_authentication_config
           allow_scheduling_on_controlplanes = var.cluster.allow_scheduling_on_controlplanes
           external_cloud_provider           = var.cluster.external_cloud_provider
-          extra_manifests                   = jsonencode(concat(var.cluster.extra_manifests, local.gateway_api_manifests))
+          extra_manifests                   = jsonencode(var.cluster.extra_manifests)
           k8s_version                       = node.k8s_version
           disable_kube_proxy                = var.cluster.disable_kube_proxy
           ip                                = node.ip
